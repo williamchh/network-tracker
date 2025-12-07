@@ -6,6 +6,7 @@ class KeyboardMonitor {
   }
 
   init() {
+    console.log('Initializing keyboard event listeners...');
     document.addEventListener('keydown', this.handleKeyDown.bind(this));
     document.addEventListener('keyup', this.handleKeyUp.bind(this));
     document.addEventListener('keypress', this.handleKeyPress.bind(this));

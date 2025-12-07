@@ -5,7 +5,8 @@ class ContentScript {
     this.aggregator = null;
     this.privacyManager = null;
     this.isActive = false;
-    
+    this.networkMonitoringActive = false;
+    console.log('Content script loaded');
     this.init();
   }
   
@@ -79,8 +80,16 @@ class ContentScript {
   }
   
   setupNetworkMonitoring() {
+    if (this.networkMonitoringActive) {
+      console.log('Network monitoring already active');
+      return;
+    }
+    
+    console.log('Setting up network monitoring...');
+    
     // 拦截fetch请求
     const originalFetch = window.fetch;
+    const self = this;
     window.fetch = function(...args) {
       const startTime = Date.now();
       return originalFetch.apply(this, args)
@@ -94,16 +103,23 @@ class ContentScript {
             duration: Date.now() - startTime
           };
           
-          chrome.runtime.sendMessage({
-            type: 'ACTIVITY_DATA',
-            data: { network: [requestData] }
-          }, (response) => {
-            if (chrome.runtime.lastError) {
-              // Ignore errors silently for network monitoring
-            }
-          });
+          console.log('Network request detected (fetch):', requestData.method, requestData.url);
+          
+          // Send without expecting a response
+          try {
+            chrome.runtime.sendMessage({
+              type: 'ACTIVITY_DATA',
+              data: { network: [requestData] }
+            });
+          } catch (error) {
+            console.log('Error sending network data:', error);
+          }
           
           return response;
+        })
+        .catch(error => {
+          console.log('Fetch error:', error);
+          throw error;
         });
     };
     
@@ -126,18 +142,24 @@ class ContentScript {
           duration: Date.now() - this._requestDetails.startTime
         };
         
-        chrome.runtime.sendMessage({
-          type: 'ACTIVITY_DATA',
-          data: { network: [requestData] }
-        }, (response) => {
-          if (chrome.runtime.lastError) {
-            // Ignore errors silently for network monitoring
-          }
-        });
+        console.log('Network request detected (XHR):', requestData.method, requestData.url);
+        
+        // Send without expecting a response
+        try {
+          chrome.runtime.sendMessage({
+            type: 'ACTIVITY_DATA',
+            data: { network: [requestData] }
+          });
+        } catch (error) {
+          console.log('Error sending network data:', error);
+        }
       });
       
       return originalXHRSend.apply(this, arguments);
     };
+    
+    this.networkMonitoringActive = true;
+    console.log('Network monitoring initialized successfully');
   }
   
   startDataCollection() {
@@ -148,14 +170,15 @@ class ContentScript {
       const rawData = this.aggregator.collectRecentActivities(30); // 最近30秒
       const sanitizedData = this.privacyManager.sanitizeData(rawData);
       
-      chrome.runtime.sendMessage({
-        type: 'ACTIVITY_DATA',
-        data: sanitizedData
-      }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.log('Error sending activity data:', chrome.runtime.lastError.message);
-        }
-      });
+      // Send without expecting a response to avoid port closure errors
+      try {
+        chrome.runtime.sendMessage({
+          type: 'ACTIVITY_DATA',
+          data: sanitizedData
+        });
+      } catch (error) {
+        console.log('Error sending activity data:', error.message);
+      }
     }, 30000);
   }
   
@@ -203,6 +226,11 @@ class ContentScript {
     } else if (settings.monitorMouse === false && this.mouseMonitor) {
       this.mouseMonitor.toggleMonitoring(false);
       console.log('Mouse monitor disabled');
+    }
+    
+    // Toggle network monitoring
+    if (settings.monitorNetwork !== false && !this.networkMonitoringActive) {
+      this.setupNetworkMonitoring();
     }
     
     // Recreate aggregator if monitors changed
