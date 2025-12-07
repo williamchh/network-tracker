@@ -111,9 +111,10 @@ class PopupManager {
     document.getElementById('keyCount').textContent = keyboardCount;
     
     // 鼠标统计
-    const mouseCount = (this.activities.mouse || []).filter(
-      m => m.timestamp > fiveMinutesAgo
-    ).length;
+    const mouseData = this.activities.mouse || [];
+    const mouseCount = Array.isArray(mouseData)
+      ? mouseData.filter(m => m.timestamp > fiveMinutesAgo).length
+      : (mouseData.allEvents || []).filter(m => m.timestamp > fiveMinutesAgo).length;
     document.getElementById('clickCount').textContent = mouseCount;
     
     // 网络统计
@@ -137,15 +138,23 @@ class PopupManager {
     
     // 合并所有类型的最新活动
     ['keyboard', 'mouse', 'network'].forEach(type => {
-      const activities = this.activities[type] || [];
-      activities.slice(-5).forEach(activity => {
-        if (now - activity.timestamp < 5 * 60 * 1000) {
-          recentActivities.push({
-            ...activity,
-            activityType: type
-          });
-        }
-      });
+      let activities = this.activities[type] || [];
+      
+      // Handle mouse data which might be an object with allEvents
+      if (type === 'mouse' && !Array.isArray(activities)) {
+        activities = activities.allEvents || [];
+      }
+      
+      if (Array.isArray(activities)) {
+        activities.slice(-5).forEach(activity => {
+          if (now - activity.timestamp < 5 * 60 * 1000) {
+            recentActivities.push({
+              ...activity,
+              activityType: type
+            });
+          }
+        });
+      }
     });
     
     // 按时间排序

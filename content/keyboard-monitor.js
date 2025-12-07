@@ -1,6 +1,7 @@
 class KeyboardMonitor {
   constructor() {
     this.keyEvents = [];
+    this.activeKeys = new Set(); // To track currently pressed keys for debouncing
     this.isActive = true;
     this.init();
   }
@@ -8,13 +9,18 @@ class KeyboardMonitor {
   init() {
     console.log('Initializing keyboard event listeners...');
     document.addEventListener('keydown', this.handleKeyDown.bind(this));
-    document.addEventListener('keyup', this.handleKeyUp.bind(this));
-    document.addEventListener('keypress', this.handleKeyPress.bind(this));
-    console.log('Keyboard event listeners attached');
+    document.addEventListener('keyup', this.handleKeyUp.bind(this)); // Keep keyup to clear activeKeys
+    console.log('Keyboard event listeners attached (keydown and keyup only)');
   }
 
   handleKeyDown(event) {
     if (!this.isActive) return;
+
+    // Prevent recording multiple keydown events for a single press (due to auto-repeat)
+    if (this.activeKeys.has(event.code)) {
+      return;
+    }
+    this.activeKeys.add(event.code);
     
     const keyEvent = {
       type: 'keydown',
@@ -37,33 +43,8 @@ class KeyboardMonitor {
 
   handleKeyUp(event) {
     if (!this.isActive) return;
-    
-    const keyEvent = {
-      type: 'keyup',
-      key: event.key,
-      code: event.code,
-      timestamp: Date.now(),
-      target: this.getElementInfo(event.target)
-    };
-    
-    this.keyEvents.push(keyEvent);
-    this.cleanOldEvents();
-  }
-
-  handleKeyPress(event) {
-    if (!this.isActive) return;
-    
-    const keyEvent = {
-      type: 'keypress',
-      key: event.key,
-      code: event.code,
-      timestamp: Date.now(),
-      target: this.getElementInfo(event.target),
-      charCode: event.charCode
-    };
-    
-    this.keyEvents.push(keyEvent);
-    this.cleanOldEvents();
+    this.activeKeys.delete(event.code); // Remove key from active set on keyup
+    // No need to record keyup events as distinct activities for monitoring
   }
 
   getRecentActivities(seconds = 300) {
@@ -101,9 +82,7 @@ class KeyboardMonitor {
     
     return {
       totalEvents: recentEvents.length,
-      keyDownCount: recentEvents.filter(e => e.type === 'keydown').length,
-      keyUpCount: recentEvents.filter(e => e.type === 'keyup').length,
-      keyPressCount: recentEvents.filter(e => e.type === 'keypress').length,
+      keyDownCount: recentEvents.length, // Now only keydown events are recorded
       mostUsedKeys: this.getMostUsedKeys(recentEvents),
       averageSpeed: this.calculateTypingSpeed(recentEvents)
     };
@@ -123,13 +102,13 @@ class KeyboardMonitor {
   }
 
   calculateTypingSpeed(events) {
-    const keyPresses = events.filter(e => e.type === 'keypress');
-    if (keyPresses.length < 2) return 0;
+    const keydowns = events.filter(e => e.type === 'keydown'); // Use keydown events for typing speed
+    if (keydowns.length < 2) return 0;
     
-    const first = keyPresses[0].timestamp;
-    const last = keyPresses[keyPresses.length - 1].timestamp;
-    const duration = (last - first) / 1000; // 秒
+    const first = keydowns[0].timestamp;
+    const last = keydowns[keydowns.length - 1].timestamp;
+    const duration = (last - first) / 1000; // seconds
     
-    return duration > 0 ? (keyPresses.length / duration) * 60 : 0; // 每分钟按键数
+    return duration > 0 ? (keydowns.length / duration) * 60 : 0; // keys per minute
   }
 }

@@ -10,7 +10,7 @@ chrome.runtime.onInstalled.addListener(() => {
       monitorNetwork: true,
       dataRetention: 5, // 分钟
       privacyMode: 'medium',
-      qaEndpoint: 'https://your-qa-system.com/api/collect'
+      qaEndpoint: '' // 默认为空，需要用户配置
     },
     activities: {
       keyboard: [],
@@ -76,15 +76,32 @@ async function handleActivityData(data, tabId) {
     
     // 处理鼠标数据 - mouseData是一个包含clicks, movements, scrolls的对象
     if (data.mouse && settings?.monitorMouse !== false) {
-      // 如果是对象结构(包含clicks, movements等)
+      // Initialize mouse array if not exists
+      if (!Array.isArray(activities.mouse)) {
+        activities.mouse = [];
+      }
+      
+      // If mouse data is an object with allEvents
       if (data.mouse.allEvents && Array.isArray(data.mouse.allEvents)) {
         activities.mouse.push(...data.mouse.allEvents);
         console.log(`Added ${data.mouse.allEvents.length} mouse events`);
       }
-      // 如果直接是数组
+      // If mouse data is directly an array
       else if (Array.isArray(data.mouse)) {
         activities.mouse.push(...data.mouse);
         console.log(`Added ${data.mouse.length} mouse events`);
+      }
+      // If mouse data is an object with clicks, movements, scrolls
+      else if (typeof data.mouse === 'object') {
+        const allMouseEvents = [
+          ...(data.mouse.clicks || []),
+          ...(data.mouse.movements || []),
+          ...(data.mouse.scrolls || [])
+        ];
+        if (allMouseEvents.length > 0) {
+          activities.mouse.push(...allMouseEvents);
+          console.log(`Added ${allMouseEvents.length} mouse events`);
+        }
       }
     }
     
@@ -96,8 +113,8 @@ async function handleActivityData(data, tabId) {
     // 保存数据
     await chrome.storage.local.set({ activities });
     
-    // 定期发送到QA系统
-    if (settings?.qaEndpoint) {
+    // 定期发送到QA系统（仅当配置了有效端点时）
+    if (settings?.qaEndpoint && settings.qaEndpoint.trim() !== '') {
       sendToQASystem(activities, settings);
     }
   } catch (error) {
@@ -108,16 +125,39 @@ async function handleActivityData(data, tabId) {
 // 发送数据到QA系统
 async function sendToQASystem(activities, settings) {
   try {
+    // 检查QA系统配置
+    if (!settings.qaEndpoint || settings.qaEndpoint.trim() === '') {
+      console.log('QA endpoint not configured, skipping data send');
+      return;
+    }
+    
+    // 验证URL格式
+    try {
+      new URL(settings.qaEndpoint);
+    } catch (urlError) {
+      console.error('Invalid QA endpoint URL:', settings.qaEndpoint, urlError);
+      return;
+    }
+    
     // 只发送最近的数据
     const now = Date.now();
-    const retentionTime = settings.dataRetention * 60 * 1000;
+    const retentionTime = (settings.dataRetention || 5) * 60 * 1000;
     
     const recentData = {
-      keyboard: activities.keyboard.filter(k => now - k.timestamp < retentionTime),
-      mouse: activities.mouse.filter(m => now - m.timestamp < retentionTime),
-      network: activities.network.filter(n => now - n.timestamp < retentionTime),
+      keyboard: (activities.keyboard || []).filter(k => k && k.timestamp && now - k.timestamp < retentionTime),
+      mouse: (activities.mouse || []).filter(m => m && m.timestamp && now - m.timestamp < retentionTime),
+      network: (activities.network || []).filter(n => n && n.timestamp && now - n.timestamp < retentionTime),
       timestamp: new Date().toISOString()
     };
+    
+    // 检查是否有数据要发送
+    const totalEvents = recentData.keyboard.length + recentData.mouse.length + recentData.network.length;
+    if (totalEvents === 0) {
+      console.log('No recent activity data to send to QA system');
+      return;
+    }
+    
+    console.log(`Sending ${totalEvents} events to QA system:`, settings.qaEndpoint);
     
     const response = await fetch(settings.qaEndpoint, {
       method: 'POST',
@@ -130,9 +170,19 @@ async function sendToQASystem(activities, settings) {
     
     if (response.ok) {
       console.log('Data sent to QA system successfully');
+    } else {
+      console.error('QA system returned error status:', response.status, response.statusText);
     }
   } catch (error) {
     console.error('Failed to send data to QA system:', error);
+    
+    // 如果是网络错误，提供更详细的信息
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      console.log('This is expected if the QA endpoint is not accessible or is a placeholder URL');
+      console.log('To fix this issue:');
+      console.log('1. Configure a real QA endpoint in the extension settings');
+      console.log('2. Or disable the QA system integration');
+    }
   }
 }
 

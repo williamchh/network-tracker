@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Monitoring Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Network Monitoring Test Page</h1>
+    <p>This page tests the network monitoring functionality of the Chrome extension.</p>
+    
+    <div class="test-section">
+        <h2>Fetch Tests</h2>
+        <button onclick="testFetchSuccess()">Successful Fetch</button>
+        <button onclick="testFetchError()">Failed Fetch</button>
+        <button onclick="testFetchWithParams()">Fetch with Parameters</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>XHR Tests</h2>
+        <button onclick="testXHRSsuccess()">Successful XHR</button>
+        <button onclick="testXHRError()">Failed XHR</button>
+        <button onclick="testXHRPost()">POST Request</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>API Tests</h2>
+        <button onclick="testJSONPlaceholder()">JSONPlaceholder API</button>
+        <button onclick="testReqresAPI()">Reqres API</button>
+    </div>
+    
+    <div id="results">
+        <h3>Test Results:</h3>
+        <div id="result-content">No tests run yet.</div>
+    </div>
+
+    <script>
+        function log(message) {
+            const resultContent = document.getElementById('result-content');
+            const timestamp = new Date().toLocaleTimeString();
+            resultContent.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+        }
+
+        function testFetchSuccess() {
+            log('Testing successful fetch...');
+            fetch('https://jsonplaceholder.typicode.com/posts/1')
+                .then(response => {
+                    log(`✅ Fetch successful: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    log(`📄 Response data received: ${data.title.substring(0, 50)}...`);
+                })
+                .catch(error => {
+                    log(`❌ Fetch failed: ${error.message}`);
+                });
+        }
+
+        function testFetchError() {
+            log('Testing failed fetch...');
+            fetch('https://nonexistent-domain-12345.com/api')
+                .then(response => {
+                    log(`📄 Response received: ${response.status}`);
+                })
+                .catch(error => {
+                    log(`❌ Fetch failed as expected: ${error.message}`);
+                });
+        }
+
+        function testFetchWithParams() {
+            log('Testing fetch with parameters...');
+            fetch('https://jsonplaceholder.typicode.com/posts?userId=1&limit=5')
+                .then(response => {
+                    log(`✅ Fetch with params successful: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    log(`📄 Received ${data.length} items`);
+                })
+                .catch(error => {
+                    log(`❌ Fetch with params failed: ${error.message}`);
+                });
+        }
+
+        function testXHRSsuccess() {
+            log('Testing successful XHR...');
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', 'https://jsonplaceholder.typicode.com/users/1');
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    log(`✅ XHR successful: ${xhr.status}`);
+                    const data = JSON.parse(xhr.responseText);
+                    log(`📄 User data: ${data.name}`);
+                } else {
+                    log(`⚠️ XHR completed with status: ${xhr.status}`);
+                }
+            };
+            xhr.onerror = function() {
+                log(`❌ XHR failed`);
+            };
+            xhr.send();
+        }
+
+        function testXHRError() {
+            log('Testing failed XHR...');
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', 'https://nonexistent-domain-12345.com/api');
+            xhr.onload = function() {
+                log(`📄 XHR response: ${xhr.status}`);
+            };
+            xhr.onerror = function() {
+                log(`❌ XHR failed as expected`);
+            };
+            xhr.send();
+        }
+
+        function testXHRPost() {
+            log('Testing POST XHR...');
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', 'https://jsonplaceholder.typicode.com/posts');
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onload = function() {
+                log(`✅ POST XHR successful: ${xhr.status}`);
+                const data = JSON.parse(xhr.responseText);
+                log(`📄 Created post with ID: ${data.id}`);
+            };
+            xhr.onerror = function() {
+                log(`❌ POST XHR failed`);
+            };
+            xhr.send(JSON.stringify({
+                title: 'Test Post',
+                body: 'This is a test post',
+                userId: 1
+            }));
+        }
+
+        function testJSONPlaceholder() {
+            log('Testing JSONPlaceholder API...');
+            fetch('https://jsonplaceholder.typicode.com/comments?postId=1')
+                .then(response => response.json())
+                .then(data => {
+                    log(`✅ JSONPlaceholder API: ${data.length} comments received`);
+                })
+                .catch(error => {
+                    log(`❌ JSONPlaceholder API failed: ${error.message}`);
+                });
+        }
+
+        function testReqresAPI() {
+            log('Testing Reqres API...');
+            fetch('https://reqres.in/api/users?page=2')
+                .then(response => response.json())
+                .then(data => {
+                    log(`✅ Reqres API: ${data.data.length} users received`);
+                })
+                .catch(error => {
+                    log(`❌ Reqres API failed: ${error.message}`);
+                });
+        }
+
+        // Auto-run some tests when page loads
+        window.addEventListener('load', function() {
+            log('🚀 Test page loaded. Click buttons to test network monitoring.');
+            log('💡 Open the Chrome extension popup to see network requests being monitored.');
+        });
+    </script>
+</body>
+</html>

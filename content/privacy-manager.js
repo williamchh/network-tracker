@@ -52,13 +52,17 @@ class PrivacyManager {
     const sanitized = { ...data };
     
     if (sanitized.keyboard) {
-      sanitized.keyboard = sanitized.keyboard.map(event => 
+      sanitized.keyboard = sanitized.keyboard.map(event =>
         this.sanitizeKeyboardEvent(event, level)
       );
     }
     
     if (sanitized.mouse) {
       sanitized.mouse = this.sanitizeMouseData(sanitized.mouse, level);
+    }
+    
+    if (sanitized.network) {
+      sanitized.network = this.sanitizeNetworkData(sanitized.network, level);
     }
     
     if (sanitized.summary) {
@@ -113,6 +117,31 @@ class PrivacyManager {
     }
     
     return sanitized;
+  }
+
+  sanitizeNetworkData(networkData, level) {
+    const sanitized = [...networkData];
+    
+    return sanitized.map(request => {
+      const sanitizedRequest = { ...request };
+      
+      if (level.redactSensitive) {
+        sanitizedRequest.url = this.sanitizeUrl(sanitizedRequest.url);
+      }
+      
+      if (level.anonymizeData) {
+        // 移除可能包含敏感信息的查询参数
+        try {
+          const url = new URL(sanitizedRequest.url);
+          url.search = '';
+          sanitizedRequest.url = url.toString();
+        } catch (e) {
+          // 如果URL解析失败，保持原样
+        }
+      }
+      
+      return sanitizedRequest;
+    });
   }
 
   sanitizeSummary(summary, level) {
