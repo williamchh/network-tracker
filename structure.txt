@@ -1,0 +1,22 @@
+user-activity-monitor-plugin/
+├── manifest.json
+├── background/
+│   ├── background.js
+│   └── service-worker.js
+├── content/
+│   ├── content.js
+│   ├── keyboard-monitor.js
+│   ├── mouse-monitor.js
+│   ├── activity-aggregator.js
+│   └── privacy-manager.js
+├── popup/
+│   ├── popup.html
+│   ├── popup.js
+│   └── popup.css
+├── options/
+│   ├── options.html
+│   ├── options.js
+│   └── options.css
+├── qa-integration.js
+├── utils.js
+└── README.md

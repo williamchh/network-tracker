@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "用户活动监控与分析插件",
+  "version": "1.0.0",
+  "description": "监控用户网络活动、键盘鼠标操作，用于QA分析",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background/service-workers.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "content/content.js",
+        "content/keyboard-monitor.js",
+        "content/mouse-monitor.js",
+        "content/activity-aggregator.js",
+        "content/privacy-manager.js"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "活动监控"
+  },
+  "options_page": "options/options.html",
+  "web_accessible_resources": [{
+    "resources": [],
+    "matches": ["<all_urls>"]
+  }]
+}

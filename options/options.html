@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="options.css">
+  <title>活动监控设置</title>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>活动监控设置</h1>
+      <p class="subtitle">配置插件行为和隐私设置</p>
+    </header>
+    
+    <main class="main-content">
+      <div class="settings-section">
+        <h2>监控设置</h2>
+        
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3>键盘活动监控</h3>
+            <p>记录用户的键盘输入和按键事件</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="monitorKeyboard">
+            <span class="slider"></span>
+          </label>
+        </div>
+        
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3>鼠标活动监控</h3>
+            <p>记录鼠标点击、移动和滚动事件</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="monitorMouse">
+            <span class="slider"></span>
+          </label>
+        </div>
+        
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3>网络活动监控</h3>
+            <p>记录页面发起的网络请求</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="monitorNetwork">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+      
+      <div class="settings-section">
+        <h2>隐私设置</h2>
+        
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3>隐私保护级别</h3>
+            <p>控制数据的敏感信息处理程度</p>
+          </div>
+          <select id="privacyMode" class="select">
+            <option value="low">低 - 收集完整数据</option>
+            <option value="medium">中 - 匿名化处理（推荐）</option>
+            <option value="high">高 - 最小化收集</option>
+          </select>
+        </div>
+        
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3>数据保留时间</h3>
+            <p>本地保存数据的时间长度</p>
+          </div>
+          <select id="dataRetention" class="select">
+            <option value="1">1分钟</option>
+            <option value="5">5分钟</option>
+            <option value="15">15分钟</option>
+            <option value="60">1小时</option>
+            <option value="1440">24小时</option>
+          </select>
+        </div>
+        
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3>自动清理数据</h3>
+            <p>关闭插件时自动清除数据</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="autoCleanup">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+      
+      <div class="settings-section">
+        <h2>QA系统集成</h2>
+        
+        <div class="setting-item full-width">
+          <div class="setting-info">
+            <h3>QA系统API端点</h3>
+            <p>用于发送活动数据的API地址</p>
+          </div>
+          <input type="text" id="qaEndpoint" class="text-input" 
+                 placeholder="https://your-qa-system.com/api/collect">
+        </div>
+        
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3>自动发送数据</h3>
+            <p>定期将数据发送到QA系统</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="autoSend">
+            <span class="slider"></span>
+          </label>
+        </div>
+        
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3>发送频率</h3>
+            <p>自动发送数据的时间间隔</p>
+          </div>
+          <select id="sendFrequency" class="select" disabled>
+            <option value="30">30秒</option>
+            <option value="60">1分钟</option>
+            <option value="300">5分钟</option>
+            <option value="600">10分钟</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="settings-section">
+        <h2>高级设置</h2>
+        
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3>启用调试模式</h3>
+            <p>在控制台输出详细日志</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="debugMode">
+            <span class="slider"></span>
+          </label>
+        </div>
+        
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3>采样频率</h3>
+            <p>鼠标移动事件的采集频率（毫秒）</p>
+          </div>
+          <select id="samplingRate" class="select">
+            <option value="50">高频 (50ms)</option>
+            <option value="100">中频 (100ms)</option>
+            <option value="200">低频 (200ms)</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="data-management">
+        <h2>数据管理</h2>
+        <div class="button-group">
+          <button id="testConnection" class="btn btn-secondary">测试连接</button>
+          <button id="exportAllData" class="btn btn-secondary">导出所有数据</button>
+          <button id="clearAllData" class="btn btn-danger">清除所有数据</button>
+          <button id="saveSettings" class="btn btn-primary">保存设置</button>
+        </div>
+      </div>
+    </main>
+    
+    <footer class="footer">
+      <div class="version-info">
+        版本: <span id="version">1.0.0</span>
+      </div>
+      <div class="status" id="statusMessage"></div>
+    </footer>
+  </div>
+  
+  <script src="options.js"></script>
+</body>
+</html>
