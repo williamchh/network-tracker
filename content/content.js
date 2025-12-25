@@ -107,7 +107,6 @@ class ContentScript {
       
       // Check if this is our network log message
       if (event.data && event.data.type === 'MY_EXT_NETWORK_LOG') {
-        console.log('Received network event via bridge:', event.data.detail);
         
         // Security/Validity checks
         if (!this.isActive || !this.contextValid || !this.isExtensionContextValid()) return;

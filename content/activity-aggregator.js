@@ -10,7 +10,6 @@ class ActivityAggregator {
   addNetworkData(data) {
     if (Array.isArray(data)) {
       this.networkData.push(...data);
-      console.log(`Added ${data.length} network events to aggregator`);
     }
   }
 
@@ -82,7 +81,6 @@ class ActivityAggregator {
         if (validEvents.length > 0) {
           this.networkData.push(...validEvents);
           this.cleanOldNetworkEvents();
-          console.log(`Added ${validEvents.length} network events`);
         }
       }
     } catch (error) {
