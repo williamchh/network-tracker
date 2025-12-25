@@ -1,86 +1,98 @@
-# 用户活动监控插件
+# User Activity Monitoring Extension
 
-一个用于QA分析的Chrome扩展，监控用户网络活动、键盘鼠标操作。
+A Chrome extension designed for QA analysis that monitors user network activity, keyboard input, and mouse interactions.
 
-## 功能特性
+## Features
 
-### 监控能力
-- **键盘活动监控**：记录所有按键事件，包括修饰键
-- **鼠标活动监控**：记录点击、移动、滚动、悬停事件
-- **网络活动监控**：拦截和分析页面网络请求
-- **实时统计**：提供活跃度评分和实时数据展示
+### Monitoring Capabilities
+- **Keyboard Activity Tracking** – Records all key events, including modifier keys  
+- **Mouse Activity Tracking** – Tracks clicks, movement, scrolling, and hover events  
+- **Network Activity Monitoring** – Intercepts and analyzes page network requests  
+- **Real-time Analytics** – Provides activity scoring and live data visualization  
 
-### 隐私保护
-- **多级隐私设置**：低/中/高三种隐私保护级别
-- **敏感信息过滤**：自动识别和过滤密码等敏感字段
-- **数据匿名化**：可选哈希化标识信息
-- **本地处理**：敏感数据优先在本地处理
+### Privacy Protection
+- **Multi-level Privacy Settings** – Low / Medium / High privacy modes  
+- **Sensitive Data Filtering** – Automatically detects and filters passwords and sensitive fields  
+- **Data Anonymization** – Optional hashing of identifying information  
+- **Local Processing** – Sensitive data is handled locally whenever possible  
 
-### QA系统集成
-- **API集成**：支持将数据发送到自定义QA系统
-- **批量发送**：智能批量处理，减少请求次数
-- **会话管理**：完整的会话跟踪和分析
-- **数据导出**：支持JSON格式数据导出
+### QA System Integration
+- **API Integration** – Supports sending data to custom QA systems  
+- **Batch Uploading** – Smart batching to reduce network requests  
+- **Session Management** – Full session tracking and analysis  
+- **Data Export** – Supports exporting data in JSON format  
 
-## 安装步骤
+---
 
-### 开发模式安装
-1. 下载或克隆本项目代码
-2. 打开Chrome浏览器，进入 `chrome://extensions/`
-3. 开启右上角的"开发者模式"
-4. 点击"加载已解压的扩展程序"
-5. 选择本项目文件夹
+## Installation
 
-### 生产环境部署
-1. 打包扩展程序：
-   - 在扩展管理页面点击"打包扩展程序"
-   - 选择项目根目录
-   - 生成.crx文件和.pem密钥文件
+### Development Mode
+1. Download or clone this project  
+2. Open Chrome and go to `chrome://extensions/`  
+3. Enable **Developer Mode** (top-right corner)  
+4. Click **Load unpacked**  
+5. Select the project directory  
 
-2. 发布到Chrome商店：
-   - 创建开发者账号
-   - 打包为zip文件上传
-   - 等待审核通过
+### Production Deployment
+1. Package the extension  
+   - In the Extensions page, click **Pack extension**  
+   - Select the project root directory  
+   - Generate the `.crx` file and `.pem` key  
 
-## 配置说明
+2. Publish to Chrome Web Store  
+   - Create a developer account  
+   - Upload a ZIP package  
+   - Wait for review and approval  
 
-### 基本配置
-在设置页面可以配置：
-- 监控开关（键盘/鼠标/网络）
-- 隐私保护级别
-- 数据保留时间
-- QA系统API端点
+---
 
-### QA系统集成
-1. 在设置页面配置API端点
-2. 测试连接确保可访问
-3. 设置自动发送频率
-4. 数据将按照配置定期发送
+## Configuration
 
-## 数据结构
+### Basic Settings
+In the settings page, you can configure:
+- Monitoring switches (keyboard / mouse / network)  
+- Privacy protection level  
+- Data retention period  
+- QA system API endpoint  
 
-### 活动数据格式
+### QA System Integration
+1. Configure the API endpoint in settings  
+2. Test the connection  
+3. Set the automatic upload frequency  
+4. Data will be sent periodically based on your configuration  
+
+---
+
+## Data Structure
+
+### Activity Data Format
 ```json
 {
-  "keyboard": [{
-    "type": "keydown",
-    "key": "a",
-    "timestamp": 1234567890,
-    "target": {
-      "tagName": "INPUT",
-      "id": "search"
+  "keyboard": [
+    {
+      "type": "keydown",
+      "key": "a",
+      "timestamp": 1234567890,
+      "target": {
+        "tagName": "INPUT",
+        "id": "search"
+      }
     }
-  }],
-  "mouse": [{
-    "type": "click",
-    "x": 100,
-    "y": 200,
-    "timestamp": 1234567890
-  }],
-  "network": [{
-    "type": "fetch",
-    "url": "https://api.example.com",
-    "method": "GET",
-    "status": 200
-  }]
+  ],
+  "mouse": [
+    {
+      "type": "click",
+      "x": 100,
+      "y": 200,
+      "timestamp": 1234567890
+    }
+  ],
+  "network": [
+    {
+      "type": "fetch",
+      "url": "https://api.example.com",
+      "method": "GET",
+      "status": 200
+    }
+  ]
 }
