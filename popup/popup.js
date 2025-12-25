@@ -495,7 +495,7 @@ class PopupManager {
     }
     
     // Add response details if available
-    if (activity.status) {
+    if (activity.status !== undefined) {
       content += `
         <div class="modal-section">
           <div class="modal-section-title">Response Details</div>
@@ -505,8 +505,51 @@ class PopupManager {
               <code>${activity.status} ${activity.statusText || ''}</code>
             </div>
           </div>
+          ${activity.duration ? `
+          <div class="modal-detail-row">
+            <div class="modal-detail-label">Duration:</div>
+            <div class="modal-detail-value">${activity.duration}ms</div>
+          </div>
+          ` : ''}
         </div>
       `;
+    }
+    
+    // Add response headers if available
+    if (activity.responseHeaders) {
+      let headers = activity.responseHeaders;
+      // Handle string format from XHR.getAllResponseHeaders()
+      if (typeof headers === 'string' && headers.trim()) {
+        const headerLines = headers.split('\n').filter(h => h.trim());
+        content += `
+          <div class="modal-section">
+            <div class="modal-section-title">Response Headers</div>
+            ${headerLines.map(line => {
+              const [key, ...valueParts] = line.split(':');
+              const value = valueParts.join(':').trim();
+              return `
+                <div class="modal-detail-row">
+                  <div class="modal-detail-label">${key}:</div>
+                  <div class="modal-detail-value">${value}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      } else if (typeof headers === 'object' && Object.keys(headers).length > 0) {
+        // Handle object format from fetch
+        content += `
+          <div class="modal-section">
+            <div class="modal-section-title">Response Headers</div>
+            ${Object.entries(headers).map(([key, value]) => `
+              <div class="modal-detail-row">
+                <div class="modal-detail-label">${key}:</div>
+                <div class="modal-detail-value">${value}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
     }
     
     // Add request body if available
@@ -526,15 +569,15 @@ class PopupManager {
     }
     
     // Add response body if available
-    if (activity.responseBody) {
+    if (activity.response) {
       content += `
         <div class="modal-section">
           <div class="modal-section-title">Response Body</div>
           <div class="modal-detail-row">
             <div class="modal-detail-value">
-              <pre>${typeof activity.responseBody === 'string'
-                ? activity.responseBody
-                : JSON.stringify(activity.responseBody, null, 2)}</pre>
+              <pre>${typeof activity.response === 'string'
+                ? activity.response
+                : JSON.stringify(activity.response, null, 2)}</pre>
             </div>
           </div>
         </div>
