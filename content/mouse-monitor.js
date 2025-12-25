@@ -9,7 +9,6 @@ class MouseMonitor {
   }
 
   init() {
-    console.log('Initializing mouse event listeners...');
     document.addEventListener('mousemove', this.handleMouseMove.bind(this));
     document.addEventListener('click', this.handleClick.bind(this));
     document.addEventListener('dblclick', this.handleDoubleClick.bind(this));
@@ -20,7 +19,6 @@ class MouseMonitor {
     // 鼠标悬停
     document.addEventListener('mouseover', this.handleMouseOver.bind(this));
     document.addEventListener('mouseout', this.handleMouseOut.bind(this));
-    console.log('Mouse event listeners attached');
   }
 
   handleMouseMove(event) {

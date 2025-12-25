@@ -1,6 +1,5 @@
 // 监听插件安装
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('Activity Monitor Plugin Installed');
   
   // 初始化存储
   chrome.storage.local.set({
@@ -71,7 +70,6 @@ async function handleActivityData(data, tabId) {
     // 添加新数据 - 检查数据是否为数组
     if (data.keyboard && Array.isArray(data.keyboard) && settings?.monitorKeyboard !== false) {
       activities.keyboard.push(...data.keyboard);
-      console.log(`Added ${data.keyboard.length} keyboard events`);
     }
     
     // 处理鼠标数据 - mouseData是一个包含clicks, movements, scrolls的对象
@@ -84,12 +82,10 @@ async function handleActivityData(data, tabId) {
       // If mouse data is an object with allEvents
       if (data.mouse.allEvents && Array.isArray(data.mouse.allEvents)) {
         activities.mouse.push(...data.mouse.allEvents);
-        console.log(`Added ${data.mouse.allEvents.length} mouse events`);
       }
       // If mouse data is directly an array
       else if (Array.isArray(data.mouse)) {
         activities.mouse.push(...data.mouse);
-        console.log(`Added ${data.mouse.length} mouse events`);
       }
       // If mouse data is an object with clicks, movements, scrolls
       else if (typeof data.mouse === 'object') {
@@ -100,14 +96,12 @@ async function handleActivityData(data, tabId) {
         ];
         if (allMouseEvents.length > 0) {
           activities.mouse.push(...allMouseEvents);
-          console.log(`Added ${allMouseEvents.length} mouse events`);
         }
       }
     }
     
     if (data.network && Array.isArray(data.network) && settings?.monitorNetwork !== false) {
       activities.network.push(...data.network);
-      console.log(`Added ${data.network.length} network events:`, data.network.map(n => `${n.method} ${n.url}`).join(', '));
     }
     
     // 保存数据
@@ -153,11 +147,9 @@ async function sendToQASystem(activities, settings) {
     // 检查是否有数据要发送
     const totalEvents = recentData.keyboard.length + recentData.mouse.length + recentData.network.length;
     if (totalEvents === 0) {
-      console.log('No recent activity data to send to QA system');
       return;
     }
     
-    console.log(`Sending ${totalEvents} events to QA system:`, settings.qaEndpoint);
     
     const response = await fetch(settings.qaEndpoint, {
       method: 'POST',
@@ -168,11 +160,11 @@ async function sendToQASystem(activities, settings) {
       body: JSON.stringify(recentData)
     });
     
-    if (response.ok) {
-      console.log('Data sent to QA system successfully');
-    } else {
-      console.error('QA system returned error status:', response.status, response.statusText);
-    }
+    // if (response.ok) {
+    //   console.log('Data sent to QA system successfully');
+    // } else {
+    //   console.error('QA system returned error status:', response.status, response.statusText);
+    // }
   } catch (error) {
     console.error('Failed to send data to QA system:', error);
     

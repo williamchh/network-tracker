@@ -3,46 +3,55 @@ class ActivityAggregator {
     this.keyboardMonitor = keyboardMonitor;
     this.mouseMonitor = mouseMonitor;
     this.networkData = [];
+    this.lastCollectionTimestamp = 0; // Track last collection time
   }
 
   // Add this method
   addNetworkData(data) {
     if (Array.isArray(data)) {
       this.networkData.push(...data);
-      console.log(`Added ${data.length} network events to aggregator`);
     }
   }
 
   collectRecentActivities(minutes) {
-    const cutoffTime = Date.now() - (minutes * 60 * 1000);
+    const now = Date.now();
+    const cutoffTime = now - (minutes * 60 * 1000);
+    
+    // Use the last collection timestamp to only collect new events
+    const sinceTime = Math.max(this.lastCollectionTimestamp, cutoffTime);
     
     const activities = {
       keyboard: [],
       mouse: {},
-      network: [] // Add this line
+      network: []
     };
     
-    // Collect keyboard data
+    // Collect keyboard data - only events since last collection
     if (this.keyboardMonitor) {
-      activities.keyboard = this.keyboardMonitor.getRecentActivities(cutoffTime);
+      activities.keyboard = this.keyboardMonitor.keyEvents.filter(
+        e => e.timestamp > sinceTime
+      );
     }
     
-    // Collect mouse data
+    // Collect mouse data - only events since last collection
     if (this.mouseMonitor) {
-      activities.mouse = this.mouseMonitor.getRecentActivities(cutoffTime);
+      activities.mouse = {
+        movements: this.mouseMonitor.movements.filter(m => m.timestamp > sinceTime),
+        clicks: this.mouseMonitor.clicks.filter(c => c.timestamp > sinceTime),
+        scrolls: this.mouseMonitor.scrolls.filter(s => s.timestamp > sinceTime),
+        allEvents: this.mouseMonitor.mouseEvents.filter(e => e.timestamp > sinceTime)
+      };
     }
     
-    // Collect network data - Add this block
+    // Collect network data - only events since last collection
     if (this.networkData && this.networkData.length > 0) {
       activities.network = this.networkData.filter(
-        item => item.timestamp >= cutoffTime
-      );
-      
-      // Clean up old network data to prevent memory leaks
-      this.networkData = this.networkData.filter(
-        item => item.timestamp >= cutoffTime
+        item => item.timestamp > sinceTime
       );
     }
+    
+    // Update the last collection timestamp
+    this.lastCollectionTimestamp = now;
     
     return activities;
   }
@@ -72,7 +81,6 @@ class ActivityAggregator {
         if (validEvents.length > 0) {
           this.networkData.push(...validEvents);
           this.cleanOldNetworkEvents();
-          console.log(`Added ${validEvents.length} network events`);
         }
       }
     } catch (error) {
