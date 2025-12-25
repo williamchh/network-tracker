@@ -130,13 +130,13 @@ class PrivacyManager {
       }
       
       if (level.anonymizeData) {
-        // 移除可能包含敏感信息的查询参数
+        // Remove query parameters that may contain sensitive information
         try {
           const url = new URL(sanitizedRequest.url);
           url.search = '';
           sanitizedRequest.url = url.toString();
         } catch (e) {
-          // 如果URL解析失败，保持原样
+          // If URL parsing fails, keep as is
         }
       }
       
@@ -177,7 +177,7 @@ class PrivacyManager {
     return {
       tagName: elementInfo.tagName,
       type: elementInfo.type,
-      // 移除或哈希化标识信息
+      // Remove or hash identifier information
       id: elementInfo.id ? 'element_id' : undefined,
       name: elementInfo.name ? 'element_name' : undefined,
       className: elementInfo.className ? 'element_class' : undefined,
@@ -186,7 +186,7 @@ class PrivacyManager {
   }
 
   hashString(str) {
-    // 简单的哈希函数，实际应用中应使用更安全的哈希
+    // Simple hash function, actual applications should use a more secure hash
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
@@ -200,7 +200,7 @@ class PrivacyManager {
     try {
       const urlObj = new URL(url);
       
-      // 移除敏感查询参数
+      // Remove sensitive query parameters
       const params = new URLSearchParams(urlObj.search);
       params.forEach((value, key) => {
         if (this.sensitivePatterns.some(pattern => 
@@ -212,7 +212,7 @@ class PrivacyManager {
       
       urlObj.search = params.toString();
       
-      // 哈希化路径中的敏感信息
+      // Hash sensitive information in path
       const pathParts = urlObj.pathname.split('/').map(part => {
         if (this.sensitivePatterns.some(pattern => pattern.test(part))) {
           return '[REDACTED]';

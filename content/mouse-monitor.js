@@ -9,6 +9,7 @@ class MouseMonitor {
   }
 
   init() {
+    console.log('Initializing mouse event listeners...');
     document.addEventListener('mousemove', this.handleMouseMove.bind(this));
     document.addEventListener('click', this.handleClick.bind(this));
     document.addEventListener('dblclick', this.handleDoubleClick.bind(this));
@@ -16,9 +17,10 @@ class MouseMonitor {
     document.addEventListener('mouseup', this.handleMouseUp.bind(this));
     document.addEventListener('scroll', this.handleScroll.bind(this), true);
     
-    // 鼠标悬停
+    // Mouse hover
     document.addEventListener('mouseover', this.handleMouseOver.bind(this));
     document.addEventListener('mouseout', this.handleMouseOut.bind(this));
+    console.log('Mouse event listeners attached');
   }
 
   handleMouseMove(event) {
@@ -168,7 +170,7 @@ class MouseMonitor {
     const recentMovements = this.movements.filter(m => m.timestamp > cutoff);
     
     const heatmap = {};
-    const gridSize = 50; // 像素
+    const gridSize = 50; // pixels
     
     recentMovements.forEach(move => {
       const gridX = Math.floor(move.x / gridSize);
@@ -244,7 +246,7 @@ class MouseMonitor {
       totalMovements: recentActivities.movements.length,
       totalClicks: recentActivities.clicks.length,
       totalScrolls: recentActivities.scrolls.length,
-      clickRate: recentActivities.clicks.length / (seconds / 60), // 每分钟点击次数
+      clickRate: recentActivities.clicks.length / (seconds / 60), // clicks per minute
       movementDistance: this.calculateMovementDistance(recentActivities.movements),
       activeAreas: Object.keys(this.getMouseHeatmap(seconds)).length
     };

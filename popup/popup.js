@@ -10,7 +10,7 @@ class PopupManager {
     this.setupEventListeners();
     this.updateUI();
     
-    // 开始定期更新
+    // Start periodic updates
     setInterval(() => this.updateUI(), 2000);
   }
   
@@ -25,7 +25,7 @@ class PopupManager {
   }
   
   setupEventListeners() {
-    // 监控开关
+    // Monitor toggles
     document.getElementById('toggleKeyboard').addEventListener('change', (e) => {
       this.updateSetting('monitorKeyboard', e.target.checked);
     });
@@ -38,12 +38,12 @@ class PopupManager {
       this.updateSetting('monitorNetwork', e.target.checked);
     });
     
-    // 隐私级别
+    // Privacy level
     document.getElementById('privacyLevel').addEventListener('change', (e) => {
       this.updateSetting('privacyMode', e.target.value);
     });
     
-    // 按钮
+    // Buttons
     document.getElementById('exportData').addEventListener('click', () => {
       this.exportData();
     });
@@ -56,7 +56,7 @@ class PopupManager {
       chrome.runtime.openOptionsPage();
     });
     
-    // 回放按钮
+    // Replay buttons
     document.getElementById('replayActivities').addEventListener('click', () => {
       this.replayActivities();
     });
@@ -73,7 +73,7 @@ class PopupManager {
       chrome.storage.local.set({ settings: this.settings }, resolve);
     });
     
-    // 通知内容脚本更新
+    // Notify content script of update
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
         chrome.tabs.sendMessage(tabs[0].id, {
@@ -87,25 +87,25 @@ class PopupManager {
   async updateUI() {
     await this.loadSettings();
     
-    // 更新开关状态
+    // Update toggle states
     document.getElementById('toggleKeyboard').checked = this.settings.monitorKeyboard !== false;
     document.getElementById('toggleMouse').checked = this.settings.monitorMouse !== false;
     document.getElementById('toggleNetwork').checked = this.settings.monitorNetwork !== false;
     
-    // 更新隐私级别
+    // Update privacy level
     const privacySelect = document.getElementById('privacyLevel');
     privacySelect.value = this.settings.privacyMode || 'medium';
     
-    // 更新统计数据
+    // Update statistics
     this.updateStats();
     
-    // 更新活动列表
+    // Update activity list
     this.updateActivityList();
     
-    // 更新会话信息
+    // Update session info
     this.updateSessionInfo();
     
-    // 更新状态指示器
+    // Update status indicator
     this.updateStatusIndicator();
   }
   
@@ -113,26 +113,26 @@ class PopupManager {
     const now = Date.now();
     const fiveMinutesAgo = now - 5 * 60 * 1000;
     
-    // 键盘统计
+    // Keyboard statistics
     const keyboardCount = (this.activities.keyboard || []).filter(
       k => k.timestamp > fiveMinutesAgo
     ).length;
     document.getElementById('keyCount').textContent = keyboardCount;
     
-    // 鼠标统计
+    // Mouse statistics
     const mouseData = this.activities.mouse || [];
     const mouseCount = Array.isArray(mouseData)
       ? mouseData.filter(m => m.timestamp > fiveMinutesAgo).length
       : (mouseData.allEvents || []).filter(m => m.timestamp > fiveMinutesAgo).length;
     document.getElementById('clickCount').textContent = mouseCount;
     
-    // 网络统计
+    // Network statistics
     const networkCount = (this.activities.network || []).filter(
       n => n.timestamp > fiveMinutesAgo
     ).length;
     document.getElementById('networkCount').textContent = networkCount;
     
-    // 活跃度评分
+    // Activity score
     const activityScore = Math.min(
       (keyboardCount * 0.3 + mouseCount * 0.4 + networkCount * 0.3) / 2,
       100
@@ -145,7 +145,7 @@ class PopupManager {
     const now = Date.now();
     const recentActivities = [];
     
-    // 合并所有类型的最新活动
+    // Merge all types of recent activities
     ['keyboard', 'mouse', 'network'].forEach(type => {
       let activities = this.activities[type] || [];
       
@@ -166,11 +166,11 @@ class PopupManager {
       }
     });
     
-    // 按时间排序
+    // Sort by time
     recentActivities.sort((a, b) => b.timestamp - a.timestamp);
     
     if (recentActivities.length === 0) {
-      activityList.innerHTML = '<div class="empty-state">暂无活动记录</div>';
+      activityList.innerHTML = '<div class="empty-state">No activity records</div>';
       return;
     }
     
@@ -191,9 +191,9 @@ class PopupManager {
   
   getActivityTypeLabel(type) {
     const labels = {
-      keyboard: '键盘',
-      mouse: '鼠标',
-      network: '网络'
+      keyboard: 'Keyboard',
+      mouse: 'Mouse',
+      network: 'Network'
     };
     return labels[type] || type;
   }
@@ -201,13 +201,13 @@ class PopupManager {
   getActivityDescription(activity) {
     switch (activity.activityType) {
       case 'keyboard':
-        return `按键: ${activity.key}`;
+        return `Key: ${activity.key}`;
       case 'mouse':
-        return activity.type === 'click' ? '点击' : activity.type;
+        return activity.type === 'click' ? 'Click' : activity.type;
       case 'network':
-        return `${activity.method} ${activity.url?.split('/').pop() || '请求'}`;
+        return `${activity.method} ${activity.url?.split('/').pop() || 'Request'}`;
       default:
-        return activity.type || '活动';
+        return activity.type || 'Activity';
     }
   }
   
@@ -216,9 +216,9 @@ class PopupManager {
     const diff = now - timestamp;
     
     if (diff < 60000) {
-      return `${Math.floor(diff / 1000)}秒前`;
+      return `${Math.floor(diff / 1000)}s ago`;
     } else if (diff < 3600000) {
-      return `${Math.floor(diff / 60000)}分钟前`;
+      return `${Math.floor(diff / 60000)}m ago`;
     } else {
       return new Date(timestamp).toLocaleTimeString([], { 
         hour: '2-digit', 
@@ -228,11 +228,11 @@ class PopupManager {
   }
   
   updateSessionInfo() {
-    // 生成简化的会话ID
+    // Generate simplified session ID
     const sessionId = Math.random().toString(36).substr(2, 8).toUpperCase();
     document.getElementById('sessionId').textContent = sessionId;
     
-    // 更新最后更新时间
+    // Update last update time
     document.getElementById('lastUpdate').textContent = 
       new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
@@ -267,7 +267,7 @@ class PopupManager {
   }
   
   async clearData() {
-    if (confirm('确定要清除所有活动数据吗？此操作不可撤销。')) {
+    if (confirm('Are you sure you want to clear all activity data? This action cannot be undone.')) {
       await new Promise((resolve) => {
         chrome.storage.local.set({ activities: {} }, resolve);
       });
@@ -277,18 +277,18 @@ class PopupManager {
   }
   
   async replayActivities() {
-    // Get the active tab
+    // Get active tab
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab) {
-      alert('请先打开一个网页标签页');
+      alert('Please open a webpage tab first');
       return;
     }
     
-    // Get the time range and speed settings
+    // Get time range and speed settings
     const timeRange = parseInt(document.getElementById('replayTimeRange').value);
     const speed = parseFloat(document.getElementById('replaySpeed').value);
     
-    // Get activities from the specified time range
+    // Get activities from specified time range
     await this.loadSettings();
     const now = Date.now();
     const cutoffTime = now - (timeRange * 60 * 1000);
@@ -303,18 +303,18 @@ class PopupManager {
       }
     };
     
-    const totalEvents = activitiesToReplay.keyboard.length +
+    const totalEvents = activitiesToReplay.keyboard.length + 
                       activitiesToReplay.mouse.allEvents.length;
     
     if (totalEvents === 0) {
-      alert(`最近${timeRange}分钟内没有活动记录`);
+      alert(`No activity records in the last ${timeRange} minutes`);
       return;
     }
     
     // Confirm before replaying
-    const confirmMsg = `即将回放最近${timeRange}分钟内的${totalEvents}个活动事件\n\n` +
-                     `回放速度: ${speed}x\n\n` +
-                     `注意: 回放将在当前网页上执行键盘和鼠标操作，请确保页面状态与录制时一致。`;
+    const confirmMsg = `About to replay ${totalEvents} activity events from the last ${timeRange} minutes\n\n` +
+                     `Playback speed: ${speed}x\n\n` +
+                     `Note: Replay will execute keyboard and mouse operations on the current webpage. Please ensure the page state matches the recording state.`;
     
     if (!confirm(confirmMsg)) {
       return;
@@ -328,11 +328,11 @@ class PopupManager {
         options: { speed: speed }
       });
       
-      // Close the popup after starting replay
+      // Close popup after starting replay
       window.close();
     } catch (error) {
       console.error('Error starting replay:', error);
-      alert('无法启动回放。请确保已刷新页面后再试。');
+      alert('Unable to start replay. Please refresh the page and try again.');
     }
   }
   
@@ -350,5 +350,5 @@ class PopupManager {
   }
 }
 
-// 初始化弹窗
+// Initialize popup
 const popupManager = new PopupManager();

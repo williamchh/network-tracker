@@ -7,97 +7,97 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>活动监控</h1>
+      <h1>Activity Monitor</h1>
       <div class="status-indicator" id="statusIndicator"></div>
     </div>
     
     <div class="section">
-      <h3>监控状态</h3>
+      <h3>Monitoring Status</h3>
       <div class="toggle-group">
         <label class="toggle">
           <input type="checkbox" id="toggleKeyboard">
-          <span class="toggle-label">键盘监控</span>
+          <span class="toggle-label">Keyboard Monitor</span>
         </label>
         <label class="toggle">
           <input type="checkbox" id="toggleMouse">
-          <span class="toggle-label">鼠标监控</span>
+          <span class="toggle-label">Mouse Monitor</span>
         </label>
         <label class="toggle">
           <input type="checkbox" id="toggleNetwork">
-          <span class="toggle-label">网络监控</span>
+          <span class="toggle-label">Network Monitor</span>
         </label>
       </div>
     </div>
     
     <div class="section">
-      <h3>实时数据</h3>
+      <h3>Real-time Data</h3>
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-value" id="keyCount">0</div>
-          <div class="stat-label">按键次数</div>
+          <div class="stat-label">Key Presses</div>
         </div>
         <div class="stat-card">
           <div class="stat-value" id="clickCount">0</div>
-          <div class="stat-label">点击次数</div>
+          <div class="stat-label">Clicks</div>
         </div>
         <div class="stat-card">
           <div class="stat-value" id="networkCount">0</div>
-          <div class="stat-label">网络请求</div>
+          <div class="stat-label">Network Requests</div>
         </div>
         <div class="stat-card">
           <div class="stat-value" id="activityScore">0</div>
-          <div class="stat-label">活跃度</div>
+          <div class="stat-label">Activity Score</div>
         </div>
       </div>
     </div>
     
     <div class="section">
-      <h3>最近活动</h3>
+      <h3>Recent Activities</h3>
       <div class="activity-list" id="activityList">
-        <div class="empty-state">暂无活动记录</div>
+        <div class="empty-state">No activity records</div>
       </div>
     </div>
     
     <div class="section">
-      <h3>隐私设置</h3>
+      <h3>Privacy Settings</h3>
       <select id="privacyLevel" class="select">
-        <option value="low">低 - 收集完整数据</option>
-        <option value="medium" selected>中 - 匿名化处理</option>
-        <option value="high">高 - 最小化收集</option>
+        <option value="low">Low - Collect full data</option>
+        <option value="medium" selected>Medium - Anonymized</option>
+        <option value="high">High - Minimal collection</option>
       </select>
     </div>
     
     <div class="section">
-      <h3>活动回放</h3>
+      <h3>Activity Replay</h3>
       <div class="replay-controls">
         <select id="replayTimeRange" class="select">
-          <option value="1">最近1分钟</option>
-          <option value="5" selected>最近5分钟</option>
-          <option value="10">最近10分钟</option>
+          <option value="1">Last 1 minute</option>
+          <option value="5" selected>Last 5 minutes</option>
+          <option value="10">Last 10 minutes</option>
         </select>
         <select id="replaySpeed" class="select">
-          <option value="0.5">0.5x 慢速</option>
-          <option value="1" selected>1x 正常</option>
-          <option value="2">2x 快速</option>
-          <option value="5">5x 极速</option>
+          <option value="0.5">0.5x Slow</option>
+          <option value="1" selected>1x Normal</option>
+          <option value="2">2x Fast</option>
+          <option value="5">5x Very Fast</option>
         </select>
-        <button id="replayActivities" class="btn btn-primary">回放</button>
-        <button id="stopReplay" class="btn btn-secondary">停止</button>
+        <button id="replayActivities" class="btn btn-primary">Replay</button>
+        <button id="stopReplay" class="btn btn-secondary">Stop</button>
       </div>
     </div>
     
     <div class="button-group">
-      <button id="exportData" class="btn btn-secondary">导出数据</button>
-      <button id="clearData" class="btn btn-secondary">清除数据</button>
-      <button id="openOptions" class="btn btn-primary">设置</button>
+      <button id="exportData" class="btn btn-secondary">Export Data</button>
+      <button id="clearData" class="btn btn-secondary">Clear Data</button>
+      <button id="openOptions" class="btn btn-primary">Settings</button>
     </div>
     
     <div class="footer">
       <div class="session-info">
-        会话ID: <span id="sessionId">-</span>
+        Session ID: <span id="sessionId">-</span>
       </div>
       <div class="last-update">
-        最后更新: <span id="lastUpdate">-</span>
+        Last Update: <span id="lastUpdate">-</span>
       </div>
     </div>
   </div>

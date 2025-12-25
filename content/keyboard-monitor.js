@@ -7,8 +7,10 @@ class KeyboardMonitor {
   }
 
   init() {
+    console.log('Initializing keyboard event listeners...');
     document.addEventListener('keydown', this.handleKeyDown.bind(this));
     document.addEventListener('keyup', this.handleKeyUp.bind(this)); // Keep keyup to clear activeKeys
+    console.log('Keyboard event listeners attached (keydown and keyup only)');
   }
 
   handleKeyDown(event) {
@@ -51,7 +53,7 @@ class KeyboardMonitor {
   }
 
   cleanOldEvents() {
-    // 只保留最近5分钟的数据
+    // Keep only data from the last 5 minutes
     const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
     this.keyEvents = this.keyEvents.filter(event => 
       event.timestamp > fiveMinutesAgo

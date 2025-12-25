@@ -7,17 +7,19 @@ class ContentScript {
     this.isActive = false;
     this.networkMonitoringActive = false;
     this.contextValid = true;
+    console.log('Content script loaded');
     this.init();
   }
   
   async init() {
-    // 获取设置
+    // Get settings
     const settings = await this.getSettings();
+    console.log('Content script initialized with settings:', settings);
     
     // Initialize monitors if enabled (default to true)
     this.initializeMonitors(settings);
     
-    // 监控网络请求
+    // Monitor network requests
     if (settings.monitorNetwork !== false) {
       this.setupNetworkMonitoring();
     }
@@ -65,10 +67,12 @@ class ContentScript {
   initializeMonitors(settings) {
     if (settings.monitorKeyboard !== false) {
       this.keyboardMonitor = new KeyboardMonitor();
+      console.log('Keyboard monitor initialized');
     }
     
     if (settings.monitorMouse !== false) {
       this.mouseMonitor = new MouseMonitor();
+      console.log('Mouse monitor initialized');
     }
     
     // Always create aggregator and privacy manager
@@ -79,16 +83,20 @@ class ContentScript {
     
     this.privacyManager = new PrivacyManager();
     
-    // 开始收集数据
+    // Start collecting data
     this.startDataCollection();
     this.isActive = true;
+    console.log('Data collection started');
   }
   
   // Revised Network Monitoring using Injection + Event Bridge
   setupNetworkMonitoring() {
     if (this.networkMonitoringActive) {
+      console.log('Network monitoring already active');
       return;
     }
+    
+    console.log('Setting up network monitoring (Injection Mode)...');
     
     // 1. Listen for events from the Injected Script (Main World)
     // This runs in the Content Script (Isolated World)
@@ -99,6 +107,8 @@ class ContentScript {
       
       // Check if this is our network log message
       if (event.data && event.data.type === 'MY_EXT_NETWORK_LOG') {
+        console.log('Received network event via bridge:', event.data.detail);
+        
         // Security/Validity checks
         if (!this.isActive || !this.contextValid || !this.isExtensionContextValid()) return;
         if (!this.aggregator) return;
@@ -126,19 +136,21 @@ class ContentScript {
     script.onload = () => script.remove(); // Clean up the tag immediately after loading
     
     this.networkMonitoringActive = true;
+    console.log('Network monitoring initialized successfully via Bridge');
   }
   
   startDataCollection() {
-    // 每30秒收集一次数据
+    // Collect data every 30 seconds
     this.dataCollectionInterval = setInterval(() => {
       // Check if context is still valid
       if (!this.isActive || !this.contextValid || !this.isExtensionContextValid()) {
+        console.log('Stopping data collection - context invalid or inactive');
         clearInterval(this.dataCollectionInterval);
         return;
       }
       
       try {
-        const rawData = this.aggregator.collectRecentActivities(30); // 最近30秒
+        const rawData = this.aggregator.collectRecentActivities(30); // Last 30 seconds
         const sanitizedData = this.privacyManager.sanitizeData(rawData);
         
         // Send without expecting a response to avoid port closure errors
@@ -154,7 +166,7 @@ class ContentScript {
       switch (message.type) {
         case 'GET_CURRENT_ACTIVITIES':
           if (this.aggregator) {
-            const data = this.aggregator.collectRecentActivities(5); // 最近5分钟
+            const data = this.aggregator.collectRecentActivities(5); // Last 5 minutes
             sendResponse(this.privacyManager.sanitizeData(data));
           } else {
             sendResponse({});
@@ -168,6 +180,7 @@ class ContentScript {
           
         case 'UPDATE_SETTINGS':
           // Handle settings update from popup/options
+          console.log('Settings updated:', message.settings);
           this.updateMonitorsWithSettings(message.settings);
           sendResponse({ success: true });
           return true;
@@ -179,15 +192,19 @@ class ContentScript {
     // Toggle keyboard monitoring
     if (settings.monitorKeyboard !== false && !this.keyboardMonitor) {
       this.keyboardMonitor = new KeyboardMonitor();
+      console.log('Keyboard monitor enabled');
     } else if (settings.monitorKeyboard === false && this.keyboardMonitor) {
       this.keyboardMonitor.toggleMonitoring(false);
+      console.log('Keyboard monitor disabled');
     }
     
     // Toggle mouse monitoring
     if (settings.monitorMouse !== false && !this.mouseMonitor) {
       this.mouseMonitor = new MouseMonitor();
+      console.log('Mouse monitor enabled');
     } else if (settings.monitorMouse === false && this.mouseMonitor) {
       this.mouseMonitor.toggleMonitoring(false);
+      console.log('Mouse monitor disabled');
     }
     
     // Always recreate aggregator to ensure network monitoring is included
@@ -205,6 +222,7 @@ class ContentScript {
       this.setupNetworkMonitoring();
     } else if (settings.monitorNetwork === false && this.networkMonitoringActive) {
       this.networkMonitoringActive = false;
+      console.log('Network monitor disabled');
     }
     
     if (!this.isActive) {
@@ -217,6 +235,7 @@ class ContentScript {
   sendActivityData = (data) => {
     // Check if extension context is still valid
     if (!this.isExtensionContextValid()) {
+      console.log('Extension context invalidated, stopping data collection');
       this.contextValid = false;
       this.isActive = false;
       
@@ -256,6 +275,5 @@ class ContentScript {
   };
 }
 
-// 启动内容脚本
+// Start content script
 const contentScript = new ContentScript();
-

@@ -10,6 +10,7 @@ class ActivityAggregator {
   addNetworkData(data) {
     if (Array.isArray(data)) {
       this.networkData.push(...data);
+      console.log(`Added ${data.length} network events to aggregator`);
     }
   }
 
@@ -81,6 +82,7 @@ class ActivityAggregator {
         if (validEvents.length > 0) {
           this.networkData.push(...validEvents);
           this.cleanOldNetworkEvents();
+          console.log(`Added ${validEvents.length} network events`);
         }
       }
     } catch (error) {
@@ -104,7 +106,7 @@ class ActivityAggregator {
 
   cleanOldNetworkEvents() {
     try {
-      // 只保留最近5分钟的数据
+      // Keep only data from the last 5 minutes
       const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
       this.networkData = this.networkData.filter(event =>
         event &&
@@ -118,7 +120,7 @@ class ActivityAggregator {
 
   generateSummary(keyboardData, mouseData, networkData, seconds) {
     const stats = {
-      timeRange: `${seconds}秒`,
+      timeRange: `${seconds} seconds`,
       totalKeyboardEvents: keyboardData.length,
       totalMouseEvents: mouseData.allEvents?.length || 0,
       totalNetworkEvents: networkData.length,
@@ -127,17 +129,17 @@ class ActivityAggregator {
       timeline: this.generateTimeline(keyboardData, mouseData, networkData, seconds)
     };
 
-    // 添加键盘统计
+    // Add keyboard statistics
     if (this.keyboardMonitor) {
       stats.keyboardStats = this.keyboardMonitor.getStatistics(seconds);
     }
 
-    // 添加鼠标统计
+    // Add mouse statistics
     if (this.mouseMonitor) {
       stats.mouseStats = this.mouseMonitor.getStatistics(seconds);
     }
 
-    // 添加网络统计
+    // Add network statistics
     stats.networkStats = this.getNetworkStatistics(networkData, seconds);
 
     return stats;
@@ -165,7 +167,7 @@ class ActivityAggregator {
   getTopInteractions(keyboardData, mouseData, networkData) {
     const interactions = [];
     
-    // 键盘交互
+    // Keyboard interactions
     const keyMap = {};
     keyboardData.forEach(event => {
       if (event.key && event.target) {
@@ -181,7 +183,7 @@ class ActivityAggregator {
         interactions.push({ type: 'keyboard', key, count });
       });
     
-    // 鼠标点击
+    // Mouse clicks
     if (mouseData.clicks) {
       const clickMap = {};
       mouseData.clicks.forEach(click => {
@@ -199,7 +201,7 @@ class ActivityAggregator {
         });
     }
     
-    // 网络请求
+    // Network requests
     const networkMap = {};
     try {
       networkData.forEach(request => {
@@ -208,7 +210,7 @@ class ActivityAggregator {
             const domain = new URL(request.url).hostname;
             networkMap[domain] = (networkMap[domain] || 0) + 1;
           } catch (e) {
-            // 忽略无效URL
+            // Ignore invalid URLs
           }
         }
       });
@@ -229,7 +231,7 @@ class ActivityAggregator {
   generateTimeline(keyboardData, mouseData, networkData, seconds) {
     const timeline = [];
     const now = Date.now();
-    const interval = Math.floor(seconds / 10); // 分为10个时间段
+    const interval = Math.floor(seconds / 10); // Divide into 10 time segments
     
     for (let i = 0; i < 10; i++) {
       const startTime = now - (seconds * 1000) + (i * interval * 1000);
@@ -274,21 +276,21 @@ class ActivityAggregator {
         
         validRequestCount++;
         
-        // 统计域名
+        // Count domains
         try {
           const domain = new URL(request.url).hostname;
           domainMap[domain] = (domainMap[domain] || 0) + 1;
         } catch (e) {
-          // 忽略无效URL
+          // Ignore invalid URLs
         }
         
-        // 统计方法
+        // Count methods
         methodMap[request.method] = (methodMap[request.method] || 0) + 1;
         
-        // 统计状态码
+        // Count status codes
         statusMap[request.status] = (statusMap[request.status] || 0) + 1;
         
-        // 累计时长
+        // Accumulate duration
         if (request.duration && typeof request.duration === 'number') {
           totalDuration += request.duration;
         }
@@ -321,7 +323,7 @@ class ActivityAggregator {
       url: window.location.href,
       userAgent: navigator.userAgent,
       screenResolution: `${window.screen.width}x${window.screen.height}`,
-      activities: this.collectRecentActivities(300) // 最近5分钟
+      activities: this.collectRecentActivities(300) // Last 5 minutes
     };
   }
 }
