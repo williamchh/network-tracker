@@ -48,6 +48,14 @@ class PopupManager {
       this.exportData();
     });
     
+    document.getElementById('importData').addEventListener('click', () => {
+      document.getElementById('importFile').click();
+    });
+    
+    document.getElementById('importFile').addEventListener('change', (e) => {
+      this.importData(e);
+    });
+    
     document.getElementById('clearData').addEventListener('click', () => {
       this.clearData();
     });
@@ -80,10 +88,22 @@ class PopupManager {
       this.closeModal();
     });
     
+    // Mouse modal close button
+    document.getElementById('closeMouseModal').addEventListener('click', () => {
+      this.closeMouseModal();
+    });
+    
     // Close modal when clicking outside
     document.getElementById('networkModal').addEventListener('click', (e) => {
       if (e.target.id === 'networkModal') {
         this.closeModal();
+      }
+    });
+    
+    // Close mouse modal when clicking outside
+    document.getElementById('mouseModal').addEventListener('click', (e) => {
+      if (e.target.id === 'mouseModal') {
+        this.closeMouseModal();
       }
     });
   }
@@ -197,28 +217,67 @@ class PopupManager {
     }
     
     activityList.innerHTML = recentActivities.slice(0, 10).map((activity, index) => `
-      <div class="activity-item ${activity.activityType === 'network' ? 'clickable' : ''}"
+      <div class="activity-item ${activity.activityType === 'network' || activity.activityType === 'mouse' ? 'clickable' : ''}"
            data-index="${index}"
            data-type="${activity.activityType}">
-        <div>
-          <span class="activity-type type-${activity.activityType}">
-            ${this.getActivityTypeLabel(activity.activityType)}
-          </span>
-          <span>${this.getActivityDescription(activity)}</span>
+        <div class="activity-content">
+          <div>
+            <span class="activity-type type-${activity.activityType}">
+              ${this.getActivityTypeLabel(activity.activityType)}
+            </span>
+            <span>${this.getActivityDescription(activity)}</span>
+          </div>
+          <div class="activity-time">
+            ${this.formatTime(activity.timestamp)}
+          </div>
         </div>
-        <div class="activity-time">
-          ${this.formatTime(activity.timestamp)}
-        </div>
+        ${activity.activityType === 'mouse' ? `
+          <button class="details-btn" data-index="${index}">Details</button>
+        ` : ''}
       </div>
     `).join('');
     
-    // Add click handlers for network activity items
+    // Add click handlers for items
     activityList.querySelectorAll('.activity-item.clickable').forEach(item => {
       item.addEventListener('click', (e) => {
+        // Don't trigger if details button was clicked
+        if (e.target.classList.contains('details-btn')) return;
+        
         const index = parseInt(e.currentTarget.dataset.index);
-        this.showNetworkActivityDetails(recentActivities[index]);
+        const activity = recentActivities[index];
+        
+        if (activity.activityType === 'network') {
+          this.showNetworkActivityDetails(activity);
+        } else if (activity.activityType === 'mouse') {
+          // Highlight position without opening modal
+          this.highlightActivityOnPage(activity);
+        }
       });
     });
+    
+    // Add click handlers for details buttons
+    activityList.querySelectorAll('.details-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const index = parseInt(e.currentTarget.dataset.index);
+        const activity = recentActivities[index];
+        this.showMouseActivityDetails(activity);
+      });
+    });
+  }
+  
+  async highlightActivityOnPage(activity) {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) return;
+    
+    try {
+      await chrome.tabs.sendMessage(tab.id, {
+        type: 'HIGHLIGHT_MOUSE_ACTIVITY',
+        activity: activity
+      });
+    } catch (error) {
+      console.error('Error highlighting activity:', error);
+    }
   }
   
   getActivityTypeLabel(type) {
@@ -279,7 +338,9 @@ class PopupManager {
   }
   
   async exportData() {
+    await this.loadSettings();
     const data = {
+      version: '1.0',
       exportTime: new Date().toISOString(),
       activities: this.activities,
       settings: this.settings
@@ -296,6 +357,42 @@ class PopupManager {
     a.click();
     
     URL.revokeObjectURL(url);
+  }
+  
+  async importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        
+        if (!data.activities) {
+          throw new Error('Invalid export file: missing activities');
+        }
+        
+        if (confirm('Importing data will overwrite your current activities. Continue?')) {
+          await new Promise((resolve) => {
+            chrome.storage.local.set({ 
+              activities: data.activities,
+              settings: data.settings || this.settings
+            }, resolve);
+          });
+          
+          this.activities = data.activities;
+          this.settings = data.settings || this.settings;
+          this.updateUI();
+          alert('Data imported successfully!');
+        }
+      } catch (error) {
+        console.error('Error importing data:', error);
+        alert('Failed to import data: ' + error.message);
+      }
+      // Reset file input
+      event.target.value = '';
+    };
+    reader.readAsText(file);
   }
   
   async clearData() {
@@ -317,34 +414,67 @@ class PopupManager {
     }
     
     // Get time range and speed settings
-    const timeRange = parseInt(document.getElementById('replayTimeRange').value);
+    const timeRangeValue = document.getElementById('replayTimeRange').value;
+    const timeRange = parseInt(timeRangeValue);
     const speed = parseFloat(document.getElementById('replaySpeed').value);
     
-    // Get activities from specified time range
+    // Get activities
     await this.loadSettings();
     const now = Date.now();
-    const cutoffTime = now - (timeRange * 60 * 1000);
+    
+    // Determine cutoff time based on selection
+    let cutoffTime;
+    if (timeRangeValue === 'all') {
+      cutoffTime = 0; // Include all activities
+    } else {
+      cutoffTime = now - (timeRange * 60 * 1000);
+    }
+    
+    console.log('Loading activities for replay, timeRange:', timeRangeValue, 'cutoffTime:', new Date(cutoffTime));
+    console.log('Activities object:', this.activities);
+    console.log('Mouse data:', this.activities.mouse);
+    
+    // Handle different possible data structures for mouse data
+    let mouseClicks = [];
+    let mouseAllEvents = [];
+    
+    if (Array.isArray(this.activities.mouse)) {
+      // Mouse data is stored as an array of events
+      mouseClicks = this.activities.mouse.filter(m => m.type === 'click' && m.timestamp > cutoffTime);
+      mouseAllEvents = this.activities.mouse.filter(m => m.timestamp > cutoffTime);
+    } else if (typeof this.activities.mouse === 'object') {
+      // Mouse data is stored as object with separate arrays
+      mouseClicks = (this.activities.mouse?.clicks || []).filter(c => c.timestamp > cutoffTime);
+      mouseAllEvents = (this.activities.mouse?.allEvents || []).filter(e => e.timestamp > cutoffTime);
+    }
+    
+    console.log('Mouse clicks found:', mouseClicks.length);
+    console.log('Mouse all events found:', mouseAllEvents.length);
     
     const activitiesToReplay = {
       keyboard: (this.activities.keyboard || []).filter(k => k.timestamp > cutoffTime),
       mouse: {
-        movements: (this.activities.mouse?.movements || []).filter(m => m.timestamp > cutoffTime),
-        clicks: (this.activities.mouse?.clicks || []).filter(c => c.timestamp > cutoffTime),
-        scrolls: (this.activities.mouse?.scrolls || []).filter(s => s.timestamp > cutoffTime),
-        allEvents: (this.activities.mouse?.allEvents || []).filter(e => e.timestamp > cutoffTime)
+        movements: [],
+        clicks: mouseClicks,
+        scrolls: [],
+        allEvents: mouseAllEvents
       }
     };
     
-    const totalEvents = activitiesToReplay.keyboard.length + 
+    const totalEvents = activitiesToReplay.keyboard.length +
                       activitiesToReplay.mouse.allEvents.length;
     
     if (totalEvents === 0) {
-      alert(`No activity records in the last ${timeRange} minutes`);
+      const msg = timeRangeValue === 'all' 
+        ? 'No activity records found' 
+        : `No activity records in the last ${timeRange} minutes. Try selecting "All recorded activities".`;
+      alert(msg);
       return;
     }
     
     // Confirm before replaying
-    const confirmMsg = `About to replay ${totalEvents} activity events from the last ${timeRange} minutes\n\n` +
+    const rangeMsg = timeRangeValue === 'all' ? 'all' : `the last ${timeRange} minutes of`;
+    const confirmMsg = `About to replay ${totalEvents} activity events from ${rangeMsg} recorded data\n\n` +
                      `Playback speed: ${speed}x\n\n` +
                      `Note: Replay will execute keyboard and mouse operations on the current webpage. Please ensure the page state matches the recording state.`;
     
@@ -590,6 +720,131 @@ class PopupManager {
   
   closeModal() {
     const modal = document.getElementById('networkModal');
+    modal.classList.remove('show');
+  }
+  
+  async showMouseActivityDetails(activity) {
+    const modal = document.getElementById('mouseModal');
+    const modalBody = document.getElementById('mouseModalBody');
+    
+    // Build the modal content
+    let content = `
+      <div class="modal-section">
+        <div class="modal-section-title">Mouse Activity Information</div>
+        <div class="modal-detail-row">
+          <div class="modal-detail-label">Event Type:</div>
+          <div class="modal-detail-value"><code>${activity.type || 'Unknown'}</code></div>
+        </div>
+        <div class="modal-detail-row">
+          <div class="modal-detail-label">Position (X, Y):</div>
+          <div class="modal-detail-value">${activity.x || 0}, ${activity.y || 0}</div>
+        </div>
+        ${activity.pageX !== undefined ? `
+        <div class="modal-detail-row">
+          <div class="modal-detail-label">Page Position (X, Y):</div>
+          <div class="modal-detail-value">${activity.pageX}, ${activity.pageY}</div>
+        </div>
+        ` : ''}
+        <div class="modal-detail-row">
+          <div class="modal-detail-label">Timestamp:</div>
+          <div class="modal-detail-value">${new Date(activity.timestamp).toLocaleString()}</div>
+        </div>
+        ${activity.button !== undefined ? `
+        <div class="modal-detail-row">
+          <div class="modal-detail-label">Button:</div>
+          <div class="modal-detail-value">${activity.button === 0 ? 'Left' : activity.button === 1 ? 'Middle' : activity.button === 2 ? 'Right' : activity.button}</div>
+        </div>
+        ` : ''}
+      </div>
+    `;
+    
+    // Add target element information if available
+    if (activity.target) {
+      content += `
+        <div class="modal-section">
+          <div class="modal-section-title">Target Element</div>
+          <div class="modal-detail-row">
+            <div class="modal-detail-label">Tag:</div>
+            <div class="modal-detail-value"><code>${activity.target.tagName || '-'}</code></div>
+          </div>
+          ${activity.target.id ? `
+          <div class="modal-detail-row">
+            <div class="modal-detail-label">ID:</div>
+            <div class="modal-detail-value"><code>${activity.target.id}</code></div>
+          </div>
+          ` : ''}
+          ${activity.target.className ? `
+          <div class="modal-detail-row">
+            <div class="modal-detail-label">Class:</div>
+            <div class="modal-detail-value"><code>${activity.target.className}</code></div>
+          </div>
+          ` : ''}
+          ${activity.target.name ? `
+          <div class="modal-detail-row">
+            <div class="modal-detail-label">Name:</div>
+            <div class="modal-detail-value"><code>${activity.target.name}</code></div>
+          </div>
+          ` : ''}
+          ${activity.target.text ? `
+          <div class="modal-detail-row">
+            <div class="modal-detail-label">Text:</div>
+            <div class="modal-detail-value">${activity.target.text}</div>
+          </div>
+          ` : ''}
+        </div>
+      `;
+    }
+    
+    // Add action button to highlight element on page
+    content += `
+      <div class="modal-section">
+        <button id="highlightElementBtn" class="btn btn-primary">Highlight Element on Page</button>
+        <div id="highlightResult" class="highlight-result"></div>
+      </div>
+    `;
+    
+    modalBody.innerHTML = content;
+    modal.classList.add('show');
+    
+    // Add click handler for highlight button
+    document.getElementById('highlightElementBtn').addEventListener('click', async () => {
+      const resultDiv = document.getElementById('highlightResult');
+      resultDiv.textContent = 'Highlighting...';
+      
+      try {
+        // Get active tab
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab) {
+          resultDiv.textContent = 'Error: No active tab found';
+          resultDiv.classList.add('error');
+          return;
+        }
+        
+        // Send message to content script to highlight element
+        const response = await chrome.tabs.sendMessage(tab.id, {
+          type: 'HIGHLIGHT_MOUSE_ACTIVITY',
+          activity: activity
+        });
+        console.log('Received response:', response);
+        
+        if (response && response.success) {
+          resultDiv.textContent = response.message || 'Element highlighted successfully!';
+          resultDiv.classList.add('success');
+        } else {
+          resultDiv.textContent = response?.message || 'Element not found on current page. You may be on a different page than when this activity was recorded.';
+          resultDiv.classList.add('error');
+        }
+      } catch (error) {
+        console.error('Error highlighting element:', error);
+        console.error('Error details:', error.message, error.stack);
+        resultDiv.textContent = `Error: ${error.message || 'Could not communicate with the page. Please refresh and try again.'}`;
+        resultDiv.classList.add('error');
+      }
+    });
+  }
+  
+  closeMouseModal() {
+    const modal = document.getElementById('mouseModal');
     modal.classList.remove('show');
   }
 }

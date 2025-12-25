@@ -181,6 +181,29 @@ body {
   transition: all 0.2s;
 }
 
+.activity-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.details-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 10px;
+  color: #6c757d;
+  transition: all 0.2s;
+}
+
+.details-btn:hover {
+  background: #e9ecef;
+  color: #212529;
+}
+
 .activity-item:hover {
   background: #e9ecef;
 }
@@ -430,4 +453,24 @@ body {
   color: #6c757d;
   font-style: italic;
   padding: 20px;
+}
+
+.highlight-result {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.highlight-result.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.highlight-result.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
 }

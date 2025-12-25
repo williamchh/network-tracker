@@ -10,17 +10,9 @@ class MouseMonitor {
 
   init() {
     console.log('Initializing mouse event listeners...');
-    document.addEventListener('mousemove', this.handleMouseMove.bind(this));
+    // Only record click events
     document.addEventListener('click', this.handleClick.bind(this));
-    document.addEventListener('dblclick', this.handleDoubleClick.bind(this));
-    document.addEventListener('mousedown', this.handleMouseDown.bind(this));
-    document.addEventListener('mouseup', this.handleMouseUp.bind(this));
-    document.addEventListener('scroll', this.handleScroll.bind(this), true);
-    
-    // Mouse hover
-    document.addEventListener('mouseover', this.handleMouseOver.bind(this));
-    document.addEventListener('mouseout', this.handleMouseOut.bind(this));
-    console.log('Mouse event listeners attached');
+    console.log('Mouse event listeners attached (click only)');
   }
 
   handleMouseMove(event) {

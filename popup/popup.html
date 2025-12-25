@@ -91,6 +91,7 @@
           <option value="1">Last 1 minute</option>
           <option value="5" selected>Last 5 minutes</option>
           <option value="10">Last 10 minutes</option>
+          <option value="all">All recorded activities</option>
         </select>
         <select id="replaySpeed" class="select">
           <option value="0.5">0.5x Slow</option>
@@ -105,6 +106,8 @@
     
     <div class="button-group">
       <button id="exportData" class="btn btn-secondary">Export Data</button>
+      <button id="importData" class="btn btn-secondary">Import Data</button>
+      <input type="file" id="importFile" style="display: none;" accept=".json">
       <button id="clearData" class="btn btn-secondary">Clear Data</button>
       <button id="openOptions" class="btn btn-primary">Settings</button>
     </div>
@@ -127,6 +130,19 @@
         <button class="modal-close" id="closeModal">&times;</button>
       </div>
       <div class="modal-body" id="modalBody">
+        <!-- Content will be populated dynamically -->
+      </div>
+    </div>
+  </div>
+  
+  <!-- Mouse Activity Modal -->
+  <div id="mouseModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Mouse Activity Details</h3>
+        <button class="modal-close" id="closeMouseModal">&times;</button>
+      </div>
+      <div class="modal-body" id="mouseModalBody">
         <!-- Content will be populated dynamically -->
       </div>
     </div>
