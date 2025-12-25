@@ -10,6 +10,7 @@
       }
     }, window.location.origin);
   }
+
   // Intercept XMLHttpRequest
   const originalSend = XMLHttpRequest.prototype.send;
   XMLHttpRequest.prototype.send = function() {
@@ -23,6 +24,7 @@
         responseHeaders: this.getAllResponseHeaders()
       });
     });
+
     this.addEventListener('error', function() {
       dispatchNetworkEvent({
         method: this._method,
@@ -34,14 +36,17 @@
         error: true
       });
     });
+
     return originalSend.apply(this, arguments);
   };
+
   const originalOpen = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function(method, url) {
     this._method = method;
     this._url = url;
     return originalOpen.apply(this, arguments);
   };
+
   const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
   XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
     if (!this._requestHeaders) {
@@ -50,6 +55,7 @@
     this._requestHeaders[header] = value;
     return originalSetRequestHeader.apply(this, arguments);
   };
+
   // Intercept Fetch API
   const originalFetch = window.fetch;
   window.fetch = function(...args) {
@@ -57,6 +63,16 @@
     const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || 'unknown';
     const options = args[1] || {};
     const method = options.method || 'GET';
+
+    // Helper to convert Headers object to plain object for postMessage compatibility
+    const headersToPlain = (headers) => {
+      if (!headers) return {};
+      if (headers instanceof Headers) {
+        return Object.fromEntries(headers.entries());
+      }
+      return headers;
+    };
+
     return originalFetch.apply(this, args)
       .then(async (response) => {
         // Clone the response to avoid consuming the body
@@ -72,15 +88,17 @@
         } catch (e) {
           // If we can't read the body, that's okay
         }
+
         dispatchNetworkEvent({
           method: method,
           url: url,
           status: response.status,
           response: responseBody,
-          requestHeaders: options.headers || {},
+          requestHeaders: headersToPlain(options.headers),
           responseHeaders: Object.fromEntries(response.headers.entries()),
           duration: Date.now() - startTime
         });
+
         return response;
       })
       .catch((error) => {
@@ -89,7 +107,7 @@
           url: url,
           status: 0,
           response: error.message || 'Fetch error',
-          requestHeaders: options.headers || {},
+          requestHeaders: headersToPlain(options.headers),
           responseHeaders: {},
           error: true,
           duration: Date.now() - startTime
@@ -97,5 +115,6 @@
         throw error;
       });
   };
+
   console.log('Network monitor bridge loaded');
 })();

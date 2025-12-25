@@ -1,15 +1,16 @@
-// 监听插件安装
+// Listen for plugin installation
 chrome.runtime.onInstalled.addListener(() => {
+  console.log('Activity Monitor Plugin Installed');
   
-  // 初始化存储
+  // Initialize storage
   chrome.storage.local.set({
     settings: {
       monitorKeyboard: true,
       monitorMouse: true,
       monitorNetwork: true,
-      dataRetention: 5, // 分钟
+      dataRetention: 5, // minutes
       privacyMode: 'medium',
-      qaEndpoint: '' // 默认为空，需要用户配置
+      qaEndpoint: '' // Default is empty, user needs to configure
     },
     activities: {
       keyboard: [],
@@ -19,7 +20,7 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-// 监听来自content script的消息
+// Listen for messages from content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.type) {
     case 'ACTIVITY_DATA':
@@ -31,7 +32,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       chrome.storage.local.get('settings', (result) => {
         sendResponse(result.settings);
       });
-      return true; // 保持消息通道开放
+      return true; // Keep message channel open
     case 'UPDATE_SETTINGS':
       chrome.storage.local.set({ settings: message.settings }, () => {
         sendResponse({ success: true });
@@ -41,24 +42,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return false; // Close message channel immediately for ACTIVITY_DATA
 });
 
-// 处理活动数据
+// Handle activity data
 async function handleActivityData(data, tabId) {
   try {
-    // 获取当前设置
+    // Get current settings
     const { settings } = await chrome.storage.local.get('settings');
     
-    // 合并数据
+    // Merge data
     const { activities } = await chrome.storage.local.get('activities');
     
     const now = Date.now();
     const retentionTime = (settings?.dataRetention || 5) * 60 * 1000;
     
-    // 初始化activities结构如果不存在
+    // Initialize activities structure if not exists
     if (!activities.keyboard) activities.keyboard = [];
     if (!activities.mouse) activities.mouse = [];
     if (!activities.network) activities.network = [];
     
-    // 清理旧数据
+    // Clean up old data
     ['keyboard', 'mouse', 'network'].forEach(type => {
       if (activities[type]) {
         activities[type] = activities[type].filter(
@@ -67,12 +68,13 @@ async function handleActivityData(data, tabId) {
       }
     });
     
-    // 添加新数据 - 检查数据是否为数组
+    // Add new data - check if data is an array
     if (data.keyboard && Array.isArray(data.keyboard) && settings?.monitorKeyboard !== false) {
       activities.keyboard.push(...data.keyboard);
+      console.log(`Added ${data.keyboard.length} keyboard events`);
     }
     
-    // 处理鼠标数据 - mouseData是一个包含clicks, movements, scrolls的对象
+    // Handle mouse data - mouseData is an object containing clicks, movements, scrolls
     if (data.mouse && settings?.monitorMouse !== false) {
       // Initialize mouse array if not exists
       if (!Array.isArray(activities.mouse)) {
@@ -82,10 +84,12 @@ async function handleActivityData(data, tabId) {
       // If mouse data is an object with allEvents
       if (data.mouse.allEvents && Array.isArray(data.mouse.allEvents)) {
         activities.mouse.push(...data.mouse.allEvents);
+        console.log(`Added ${data.mouse.allEvents.length} mouse events`);
       }
       // If mouse data is directly an array
       else if (Array.isArray(data.mouse)) {
         activities.mouse.push(...data.mouse);
+        console.log(`Added ${data.mouse.length} mouse events`);
       }
       // If mouse data is an object with clicks, movements, scrolls
       else if (typeof data.mouse === 'object') {
@@ -96,18 +100,20 @@ async function handleActivityData(data, tabId) {
         ];
         if (allMouseEvents.length > 0) {
           activities.mouse.push(...allMouseEvents);
+          console.log(`Added ${allMouseEvents.length} mouse events`);
         }
       }
     }
     
     if (data.network && Array.isArray(data.network) && settings?.monitorNetwork !== false) {
       activities.network.push(...data.network);
+      console.log(`Added ${data.network.length} network events:`, data.network.map(n => `${n.method} ${n.url}`).join(', '));
     }
     
-    // 保存数据
+    // Save data
     await chrome.storage.local.set({ activities });
     
-    // 定期发送到QA系统（仅当配置了有效端点时）
+    // Periodically send to QA system (only when valid endpoint is configured)
     if (settings?.qaEndpoint && settings.qaEndpoint.trim() !== '') {
       sendToQASystem(activities, settings);
     }
@@ -116,16 +122,16 @@ async function handleActivityData(data, tabId) {
   }
 }
 
-// 发送数据到QA系统
+// Send data to QA system
 async function sendToQASystem(activities, settings) {
   try {
-    // 检查QA系统配置
+    // Check QA system configuration
     if (!settings.qaEndpoint || settings.qaEndpoint.trim() === '') {
       console.log('QA endpoint not configured, skipping data send');
       return;
     }
     
-    // 验证URL格式
+    // Validate URL format
     try {
       new URL(settings.qaEndpoint);
     } catch (urlError) {
@@ -133,7 +139,7 @@ async function sendToQASystem(activities, settings) {
       return;
     }
     
-    // 只发送最近的数据
+    // Only send recent data
     const now = Date.now();
     const retentionTime = (settings.dataRetention || 5) * 60 * 1000;
     
@@ -144,12 +150,14 @@ async function sendToQASystem(activities, settings) {
       timestamp: new Date().toISOString()
     };
     
-    // 检查是否有数据要发送
+    // Check if there is data to send
     const totalEvents = recentData.keyboard.length + recentData.mouse.length + recentData.network.length;
     if (totalEvents === 0) {
+      console.log('No recent activity data to send to QA system');
       return;
     }
     
+    console.log(`Sending ${totalEvents} events to QA system:`, settings.qaEndpoint);
     
     const response = await fetch(settings.qaEndpoint, {
       method: 'POST',
@@ -160,15 +168,15 @@ async function sendToQASystem(activities, settings) {
       body: JSON.stringify(recentData)
     });
     
-    // if (response.ok) {
-    //   console.log('Data sent to QA system successfully');
-    // } else {
-    //   console.error('QA system returned error status:', response.status, response.statusText);
-    // }
+    if (response.ok) {
+      console.log('Data sent to QA system successfully');
+    } else {
+      console.error('QA system returned error status:', response.status, response.statusText);
+    }
   } catch (error) {
     console.error('Failed to send data to QA system:', error);
     
-    // 如果是网络错误，提供更详细的信息
+    // If it's a network error, provide more detailed information
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
       console.log('This is expected if the QA endpoint is not accessible or is a placeholder URL');
       console.log('To fix this issue:');
@@ -178,7 +186,7 @@ async function sendToQASystem(activities, settings) {
   }
 }
 
-// 定期清理数据
+// Periodically clean up data
 setInterval(async () => {
   const { activities, settings } = await chrome.storage.local.get(['activities', 'settings']);
   const now = Date.now();
@@ -191,4 +199,4 @@ setInterval(async () => {
   });
   
   await chrome.storage.local.set({ activities });
-}, 60000); // 每分钟清理一次
+}, 60000); // Clean up every minute

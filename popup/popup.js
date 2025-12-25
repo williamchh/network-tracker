@@ -10,7 +10,7 @@ class PopupManager {
     this.setupEventListeners();
     this.updateUI();
     
-    // 开始定期更新
+    // Start periodic updates
     setInterval(() => this.updateUI(), 2000);
   }
   
@@ -25,7 +25,7 @@ class PopupManager {
   }
   
   setupEventListeners() {
-    // 监控开关
+    // Monitor toggles
     document.getElementById('toggleKeyboard').addEventListener('change', (e) => {
       this.updateSetting('monitorKeyboard', e.target.checked);
     });
@@ -38,12 +38,12 @@ class PopupManager {
       this.updateSetting('monitorNetwork', e.target.checked);
     });
     
-    // 隐私级别
+    // Privacy level
     document.getElementById('privacyLevel').addEventListener('change', (e) => {
       this.updateSetting('privacyMode', e.target.value);
     });
     
-    // 按钮
+    // Buttons
     document.getElementById('exportData').addEventListener('click', () => {
       this.exportData();
     });
@@ -55,6 +55,37 @@ class PopupManager {
     document.getElementById('openOptions').addEventListener('click', () => {
       chrome.runtime.openOptionsPage();
     });
+    
+    // Replay buttons
+    document.getElementById('replayActivities').addEventListener('click', () => {
+      this.replayActivities();
+    });
+    
+    document.getElementById('stopReplay').addEventListener('click', () => {
+      this.stopReplay();
+    });
+    
+    // Refresh button
+    document.getElementById('refreshActivities').addEventListener('click', () => {
+      this.refreshActivities();
+    });
+    
+    // Clear activities button
+    document.getElementById('clearActivities').addEventListener('click', () => {
+      this.clearActivities();
+    });
+    
+    // Modal close button
+    document.getElementById('closeModal').addEventListener('click', () => {
+      this.closeModal();
+    });
+    
+    // Close modal when clicking outside
+    document.getElementById('networkModal').addEventListener('click', (e) => {
+      if (e.target.id === 'networkModal') {
+        this.closeModal();
+      }
+    });
   }
   
   async updateSetting(key, value) {
@@ -64,7 +95,7 @@ class PopupManager {
       chrome.storage.local.set({ settings: this.settings }, resolve);
     });
     
-    // 通知内容脚本更新
+    // Notify content script of update
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
         chrome.tabs.sendMessage(tabs[0].id, {
@@ -78,25 +109,25 @@ class PopupManager {
   async updateUI() {
     await this.loadSettings();
     
-    // 更新开关状态
+    // Update toggle states
     document.getElementById('toggleKeyboard').checked = this.settings.monitorKeyboard !== false;
     document.getElementById('toggleMouse').checked = this.settings.monitorMouse !== false;
     document.getElementById('toggleNetwork').checked = this.settings.monitorNetwork !== false;
     
-    // 更新隐私级别
+    // Update privacy level
     const privacySelect = document.getElementById('privacyLevel');
     privacySelect.value = this.settings.privacyMode || 'medium';
     
-    // 更新统计数据
+    // Update statistics
     this.updateStats();
     
-    // 更新活动列表
+    // Update activity list
     this.updateActivityList();
     
-    // 更新会话信息
+    // Update session info
     this.updateSessionInfo();
     
-    // 更新状态指示器
+    // Update status indicator
     this.updateStatusIndicator();
   }
   
@@ -104,26 +135,26 @@ class PopupManager {
     const now = Date.now();
     const fiveMinutesAgo = now - 5 * 60 * 1000;
     
-    // 键盘统计
+    // Keyboard statistics
     const keyboardCount = (this.activities.keyboard || []).filter(
       k => k.timestamp > fiveMinutesAgo
     ).length;
     document.getElementById('keyCount').textContent = keyboardCount;
     
-    // 鼠标统计
+    // Mouse statistics
     const mouseData = this.activities.mouse || [];
     const mouseCount = Array.isArray(mouseData)
       ? mouseData.filter(m => m.timestamp > fiveMinutesAgo).length
       : (mouseData.allEvents || []).filter(m => m.timestamp > fiveMinutesAgo).length;
     document.getElementById('clickCount').textContent = mouseCount;
     
-    // 网络统计
+    // Network statistics
     const networkCount = (this.activities.network || []).filter(
       n => n.timestamp > fiveMinutesAgo
     ).length;
     document.getElementById('networkCount').textContent = networkCount;
     
-    // 活跃度评分
+    // Activity score
     const activityScore = Math.min(
       (keyboardCount * 0.3 + mouseCount * 0.4 + networkCount * 0.3) / 2,
       100
@@ -136,7 +167,7 @@ class PopupManager {
     const now = Date.now();
     const recentActivities = [];
     
-    // 合并所有类型的最新活动
+    // Merge all types of recent activities
     ['keyboard', 'mouse', 'network'].forEach(type => {
       let activities = this.activities[type] || [];
       
@@ -157,16 +188,18 @@ class PopupManager {
       }
     });
     
-    // 按时间排序
+    // Sort by time
     recentActivities.sort((a, b) => b.timestamp - a.timestamp);
     
     if (recentActivities.length === 0) {
-      activityList.innerHTML = '<div class="empty-state">暂无活动记录</div>';
+      activityList.innerHTML = '<div class="empty-state">No activity records</div>';
       return;
     }
     
-    activityList.innerHTML = recentActivities.slice(0, 10).map(activity => `
-      <div class="activity-item">
+    activityList.innerHTML = recentActivities.slice(0, 10).map((activity, index) => `
+      <div class="activity-item ${activity.activityType === 'network' ? 'clickable' : ''}"
+           data-index="${index}"
+           data-type="${activity.activityType}">
         <div>
           <span class="activity-type type-${activity.activityType}">
             ${this.getActivityTypeLabel(activity.activityType)}
@@ -178,13 +211,21 @@ class PopupManager {
         </div>
       </div>
     `).join('');
+    
+    // Add click handlers for network activity items
+    activityList.querySelectorAll('.activity-item.clickable').forEach(item => {
+      item.addEventListener('click', (e) => {
+        const index = parseInt(e.currentTarget.dataset.index);
+        this.showNetworkActivityDetails(recentActivities[index]);
+      });
+    });
   }
   
   getActivityTypeLabel(type) {
     const labels = {
-      keyboard: '键盘',
-      mouse: '鼠标',
-      network: '网络'
+      keyboard: 'Keyboard',
+      mouse: 'Mouse',
+      network: 'Network'
     };
     return labels[type] || type;
   }
@@ -192,13 +233,13 @@ class PopupManager {
   getActivityDescription(activity) {
     switch (activity.activityType) {
       case 'keyboard':
-        return `按键: ${activity.key}`;
+        return `Key: ${activity.key}`;
       case 'mouse':
-        return activity.type === 'click' ? '点击' : activity.type;
+        return activity.type === 'click' ? 'Click' : activity.type;
       case 'network':
-        return `${activity.method} ${activity.url?.split('/').pop() || '请求'}`;
+        return `${activity.method} ${activity.url?.split('/').pop() || 'Request'}`;
       default:
-        return activity.type || '活动';
+        return activity.type || 'Activity';
     }
   }
   
@@ -207,9 +248,9 @@ class PopupManager {
     const diff = now - timestamp;
     
     if (diff < 60000) {
-      return `${Math.floor(diff / 1000)}秒前`;
+      return `${Math.floor(diff / 1000)}s ago`;
     } else if (diff < 3600000) {
-      return `${Math.floor(diff / 60000)}分钟前`;
+      return `${Math.floor(diff / 60000)}m ago`;
     } else {
       return new Date(timestamp).toLocaleTimeString([], { 
         hour: '2-digit', 
@@ -219,11 +260,11 @@ class PopupManager {
   }
   
   updateSessionInfo() {
-    // 生成简化的会话ID
+    // Generate simplified session ID
     const sessionId = Math.random().toString(36).substr(2, 8).toUpperCase();
     document.getElementById('sessionId').textContent = sessionId;
     
-    // 更新最后更新时间
+    // Update last update time
     document.getElementById('lastUpdate').textContent = 
       new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
@@ -258,7 +299,7 @@ class PopupManager {
   }
   
   async clearData() {
-    if (confirm('确定要清除所有活动数据吗？此操作不可撤销。')) {
+    if (confirm('Are you sure you want to clear all activity data? This action cannot be undone.')) {
       await new Promise((resolve) => {
         chrome.storage.local.set({ activities: {} }, resolve);
       });
@@ -266,7 +307,292 @@ class PopupManager {
       this.updateUI();
     }
   }
+  
+  async replayActivities() {
+    // Get active tab
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) {
+      alert('Please open a webpage tab first');
+      return;
+    }
+    
+    // Get time range and speed settings
+    const timeRange = parseInt(document.getElementById('replayTimeRange').value);
+    const speed = parseFloat(document.getElementById('replaySpeed').value);
+    
+    // Get activities from specified time range
+    await this.loadSettings();
+    const now = Date.now();
+    const cutoffTime = now - (timeRange * 60 * 1000);
+    
+    const activitiesToReplay = {
+      keyboard: (this.activities.keyboard || []).filter(k => k.timestamp > cutoffTime),
+      mouse: {
+        movements: (this.activities.mouse?.movements || []).filter(m => m.timestamp > cutoffTime),
+        clicks: (this.activities.mouse?.clicks || []).filter(c => c.timestamp > cutoffTime),
+        scrolls: (this.activities.mouse?.scrolls || []).filter(s => s.timestamp > cutoffTime),
+        allEvents: (this.activities.mouse?.allEvents || []).filter(e => e.timestamp > cutoffTime)
+      }
+    };
+    
+    const totalEvents = activitiesToReplay.keyboard.length + 
+                      activitiesToReplay.mouse.allEvents.length;
+    
+    if (totalEvents === 0) {
+      alert(`No activity records in the last ${timeRange} minutes`);
+      return;
+    }
+    
+    // Confirm before replaying
+    const confirmMsg = `About to replay ${totalEvents} activity events from the last ${timeRange} minutes\n\n` +
+                     `Playback speed: ${speed}x\n\n` +
+                     `Note: Replay will execute keyboard and mouse operations on the current webpage. Please ensure the page state matches the recording state.`;
+    
+    if (!confirm(confirmMsg)) {
+      return;
+    }
+    
+    // Send replay message to content script
+    try {
+      await chrome.tabs.sendMessage(tab.id, {
+        type: 'REPLAY_ACTIVITIES',
+        activities: activitiesToReplay,
+        options: { speed: speed }
+      });
+      
+      // Close popup after starting replay
+      window.close();
+    } catch (error) {
+      console.error('Error starting replay:', error);
+      alert('Unable to start replay. Please refresh the page and try again.');
+    }
+  }
+  
+  async stopReplay() {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) return;
+    
+    try {
+      await chrome.tabs.sendMessage(tab.id, {
+        type: 'STOP_REPLAY'
+      });
+    } catch (error) {
+      console.error('Error stopping replay:', error);
+    }
+  }
+  
+  async refreshActivities() {
+    const refreshBtn = document.getElementById('refreshActivities');
+    
+    // Add spinning animation
+    refreshBtn.classList.add('spinning');
+    
+    try {
+      // Get active tab and send refresh message to content script
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.id) {
+        await chrome.tabs.sendMessage(tab.id, {
+          type: 'REFRESH_ACTIVITIES'
+        });
+        
+        // Wait a moment for data to be sent to aggregator, then reload
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      
+      // Reload settings and update UI
+      await this.loadSettings();
+      this.updateUI();
+    } catch (error) {
+      console.log('Error during refresh:', error);
+      // If content script is not available, just reload settings
+      await this.loadSettings();
+      this.updateUI();
+    } finally {
+      // Always remove spinning animation
+      refreshBtn.classList.remove('spinning');
+    }
+  }
+  
+  async clearActivities() {
+    // Confirm before clearing
+    if (!confirm('Are you sure you want to clear all activity records? This will reset the state and start recording from scratch.')) {
+      return;
+    }
+    
+    try {
+      // Clear activities from storage
+      await chrome.storage.local.set({
+        activities: {
+          keyboard: [],
+          mouse: [],
+          network: []
+        }
+      });
+      
+      // Send reset message to content script to clear its state
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.id) {
+        try {
+          await chrome.tabs.sendMessage(tab.id, {
+            type: 'RESET_ACTIVITIES'
+          });
+        } catch (error) {
+          console.log('Could not send reset message to content script:', error);
+        }
+      }
+      
+      // Reload settings and update UI to show empty state
+      await this.loadSettings();
+      this.updateUI();
+      
+      console.log('Activities cleared successfully');
+    } catch (error) {
+      console.error('Error clearing activities:', error);
+      alert('Failed to clear activities. Please try again.');
+    }
+  }
+  
+  showNetworkActivityDetails(activity) {
+    const modal = document.getElementById('networkModal');
+    const modalBody = document.getElementById('modalBody');
+    
+    // Build the modal content
+    let content = `
+      <div class="modal-section">
+        <div class="modal-section-title">Request Information</div>
+        <div class="modal-detail-row">
+          <div class="modal-detail-label">Method:</div>
+          <div class="modal-detail-value"><code>${activity.method || 'GET'}</code></div>
+        </div>
+        <div class="modal-detail-row">
+          <div class="modal-detail-label">URL:</div>
+          <div class="modal-detail-value">${activity.url || '-'}</div>
+        </div>
+        <div class="modal-detail-row">
+          <div class="modal-detail-label">Type:</div>
+          <div class="modal-detail-value">${activity.type || 'xhr'}</div>
+        </div>
+        <div class="modal-detail-row">
+          <div class="modal-detail-label">Timestamp:</div>
+          <div class="modal-detail-value">${new Date(activity.timestamp).toLocaleString()}</div>
+        </div>
+      </div>
+    `;
+    
+    // Add request headers if available
+    if (activity.requestHeaders && Object.keys(activity.requestHeaders).length > 0) {
+      content += `
+        <div class="modal-section">
+          <div class="modal-section-title">Request Headers</div>
+          ${Object.entries(activity.requestHeaders).map(([key, value]) => `
+            <div class="modal-detail-row">
+              <div class="modal-detail-label">${key}:</div>
+              <div class="modal-detail-value">${value}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+    
+    // Add response details if available
+    if (activity.status !== undefined) {
+      content += `
+        <div class="modal-section">
+          <div class="modal-section-title">Response Details</div>
+          <div class="modal-detail-row">
+            <div class="modal-detail-label">Status:</div>
+            <div class="modal-detail-value">
+              <code>${activity.status} ${activity.statusText || ''}</code>
+            </div>
+          </div>
+          ${activity.duration ? `
+          <div class="modal-detail-row">
+            <div class="modal-detail-label">Duration:</div>
+            <div class="modal-detail-value">${activity.duration}ms</div>
+          </div>
+          ` : ''}
+        </div>
+      `;
+    }
+    
+    // Add response headers if available
+    if (activity.responseHeaders) {
+      let headers = activity.responseHeaders;
+      // Handle string format from XHR.getAllResponseHeaders()
+      if (typeof headers === 'string' && headers.trim()) {
+        const headerLines = headers.split('\n').filter(h => h.trim());
+        content += `
+          <div class="modal-section">
+            <div class="modal-section-title">Response Headers</div>
+            ${headerLines.map(line => {
+              const [key, ...valueParts] = line.split(':');
+              const value = valueParts.join(':').trim();
+              return `
+                <div class="modal-detail-row">
+                  <div class="modal-detail-label">${key}:</div>
+                  <div class="modal-detail-value">${value}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      } else if (typeof headers === 'object' && Object.keys(headers).length > 0) {
+        // Handle object format from fetch
+        content += `
+          <div class="modal-section">
+            <div class="modal-section-title">Response Headers</div>
+            ${Object.entries(headers).map(([key, value]) => `
+              <div class="modal-detail-row">
+                <div class="modal-detail-label">${key}:</div>
+                <div class="modal-detail-value">${value}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+    }
+    
+    // Add request body if available
+    if (activity.requestBody) {
+      content += `
+        <div class="modal-section">
+          <div class="modal-section-title">Request Body</div>
+          <div class="modal-detail-row">
+            <div class="modal-detail-value">
+              <pre>${typeof activity.requestBody === 'string'
+                ? activity.requestBody
+                : JSON.stringify(activity.requestBody, null, 2)}</pre>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Add response body if available
+    if (activity.response) {
+      content += `
+        <div class="modal-section">
+          <div class="modal-section-title">Response Body</div>
+          <div class="modal-detail-row">
+            <div class="modal-detail-value">
+              <pre>${typeof activity.response === 'string'
+                ? activity.response
+                : JSON.stringify(activity.response, null, 2)}</pre>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    modalBody.innerHTML = content;
+    modal.classList.add('show');
+  }
+  
+  closeModal() {
+    const modal = document.getElementById('networkModal');
+    modal.classList.remove('show');
+  }
 }
 
-// 初始化弹窗
+// Initialize popup
 const popupManager = new PopupManager();

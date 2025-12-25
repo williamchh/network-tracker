@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "用户活动监控与分析插件",
+  "name": "User Activity Monitor & Analyzer",
   "version": "1.0.0",
-  "description": "监控用户网络活动、键盘鼠标操作，用于QA分析",
+  "description": "Monitor user network activity, keyboard and mouse operations for QA analysis",
   "permissions": [
     "storage",
     "activeTab",
@@ -21,7 +21,8 @@
         "content/keyboard-monitor.js",
         "content/mouse-monitor.js",
         "content/activity-aggregator.js",
-        "content/privacy-manager.js"
+        "content/privacy-manager.js",
+        "content/activity-replayer.js"
       ],
       "run_at": "document_end"
     }

@@ -3,23 +3,23 @@
 <head>
   <meta charset="utf-8">
   <link rel="stylesheet" href="options.css">
-  <title>活动监控设置</title>
+  <title>Activity Monitor Settings</title>
 </head>
 <body>
   <div class="container">
     <header class="header">
-      <h1>活动监控设置</h1>
-      <p class="subtitle">配置插件行为和隐私设置</p>
+      <h1>Activity Monitor Settings</h1>
+      <p class="subtitle">Configure plugin behavior and privacy settings</p>
     </header>
     
     <main class="main-content">
       <div class="settings-section">
-        <h2>监控设置</h2>
+        <h2>Monitoring Settings</h2>
         
         <div class="setting-item">
           <div class="setting-info">
-            <h3>键盘活动监控</h3>
-            <p>记录用户的键盘输入和按键事件</p>
+            <h3>Keyboard Activity Monitoring</h3>
+            <p>Record user keyboard input and key events</p>
           </div>
           <label class="switch">
             <input type="checkbox" id="monitorKeyboard">
@@ -29,8 +29,8 @@
         
         <div class="setting-item">
           <div class="setting-info">
-            <h3>鼠标活动监控</h3>
-            <p>记录鼠标点击、移动和滚动事件</p>
+            <h3>Mouse Activity Monitoring</h3>
+            <p>Record mouse clicks, movements, and scroll events</p>
           </div>
           <label class="switch">
             <input type="checkbox" id="monitorMouse">
@@ -40,8 +40,8 @@
         
         <div class="setting-item">
           <div class="setting-info">
-            <h3>网络活动监控</h3>
-            <p>记录页面发起的网络请求</p>
+            <h3>Network Activity Monitoring</h3>
+            <p>Record network requests initiated by the page</p>
           </div>
           <label class="switch">
             <input type="checkbox" id="monitorNetwork">
@@ -51,38 +51,38 @@
       </div>
       
       <div class="settings-section">
-        <h2>隐私设置</h2>
+        <h2>Privacy Settings</h2>
         
         <div class="setting-item">
           <div class="setting-info">
-            <h3>隐私保护级别</h3>
-            <p>控制数据的敏感信息处理程度</p>
+            <h3>Privacy Protection Level</h3>
+            <p>Control the degree of sensitive information handling</p>
           </div>
           <select id="privacyMode" class="select">
-            <option value="low">低 - 收集完整数据</option>
-            <option value="medium">中 - 匿名化处理（推荐）</option>
-            <option value="high">高 - 最小化收集</option>
+            <option value="low">Low - Collect full data</option>
+            <option value="medium">Medium - Anonymized (Recommended)</option>
+            <option value="high">High - Minimal collection</option>
           </select>
         </div>
         
         <div class="setting-item">
           <div class="setting-info">
-            <h3>数据保留时间</h3>
-            <p>本地保存数据的时间长度</p>
+            <h3>Data Retention Time</h3>
+            <p>Duration of local data storage</p>
           </div>
           <select id="dataRetention" class="select">
-            <option value="1">1分钟</option>
-            <option value="5">5分钟</option>
-            <option value="15">15分钟</option>
-            <option value="60">1小时</option>
-            <option value="1440">24小时</option>
+            <option value="1">1 minute</option>
+            <option value="5">5 minutes</option>
+            <option value="15">15 minutes</option>
+            <option value="60">1 hour</option>
+            <option value="1440">24 hours</option>
           </select>
         </div>
         
         <div class="setting-item">
           <div class="setting-info">
-            <h3>自动清理数据</h3>
-            <p>关闭插件时自动清除数据</p>
+            <h3>Auto Cleanup Data</h3>
+            <p>Automatically clear data when plugin is closed</p>
           </div>
           <label class="switch">
             <input type="checkbox" id="autoCleanup">
@@ -92,12 +92,12 @@
       </div>
       
       <div class="settings-section">
-        <h2>QA系统集成</h2>
+        <h2>QA System Integration</h2>
         
         <div class="setting-item full-width">
           <div class="setting-info">
-            <h3>QA系统API端点</h3>
-            <p>用于发送活动数据的API地址</p>
+            <h3>QA System API Endpoint</h3>
+            <p>API address for sending activity data</p>
           </div>
           <input type="text" id="qaEndpoint" class="text-input" 
                  placeholder="https://your-qa-system.com/api/collect">
@@ -105,8 +105,8 @@
         
         <div class="setting-item">
           <div class="setting-info">
-            <h3>自动发送数据</h3>
-            <p>定期将数据发送到QA系统</p>
+            <h3>Auto Send Data</h3>
+            <p>Periodically send data to QA system</p>
           </div>
           <label class="switch">
             <input type="checkbox" id="autoSend">
@@ -116,25 +116,25 @@
         
         <div class="setting-item">
           <div class="setting-info">
-            <h3>发送频率</h3>
-            <p>自动发送数据的时间间隔</p>
+            <h3>Send Frequency</h3>
+            <p>Time interval for automatic data sending</p>
           </div>
           <select id="sendFrequency" class="select" disabled>
-            <option value="30">30秒</option>
-            <option value="60">1分钟</option>
-            <option value="300">5分钟</option>
-            <option value="600">10分钟</option>
+            <option value="30">30 seconds</option>
+            <option value="60">1 minute</option>
+            <option value="300">5 minutes</option>
+            <option value="600">10 minutes</option>
           </select>
         </div>
       </div>
       
       <div class="settings-section">
-        <h2>高级设置</h2>
+        <h2>Advanced Settings</h2>
         
         <div class="setting-item">
           <div class="setting-info">
-            <h3>启用调试模式</h3>
-            <p>在控制台输出详细日志</p>
+            <h3>Enable Debug Mode</h3>
+            <p>Output detailed logs to console</p>
           </div>
           <label class="switch">
             <input type="checkbox" id="debugMode">
@@ -144,31 +144,31 @@
         
         <div class="setting-item">
           <div class="setting-info">
-            <h3>采样频率</h3>
-            <p>鼠标移动事件的采集频率（毫秒）</p>
+            <h3>Sampling Rate</h3>
+            <p>Collection frequency for mouse movement events (ms)</p>
           </div>
           <select id="samplingRate" class="select">
-            <option value="50">高频 (50ms)</option>
-            <option value="100">中频 (100ms)</option>
-            <option value="200">低频 (200ms)</option>
+            <option value="50">High (50ms)</option>
+            <option value="100">Medium (100ms)</option>
+            <option value="200">Low (200ms)</option>
           </select>
         </div>
       </div>
       
       <div class="data-management">
-        <h2>数据管理</h2>
+        <h2>Data Management</h2>
         <div class="button-group">
-          <button id="testConnection" class="btn btn-secondary">测试连接</button>
-          <button id="exportAllData" class="btn btn-secondary">导出所有数据</button>
-          <button id="clearAllData" class="btn btn-danger">清除所有数据</button>
-          <button id="saveSettings" class="btn btn-primary">保存设置</button>
+          <button id="testConnection" class="btn btn-secondary">Test Connection</button>
+          <button id="exportAllData" class="btn btn-secondary">Export All Data</button>
+          <button id="clearAllData" class="btn btn-danger">Clear All Data</button>
+          <button id="saveSettings" class="btn btn-primary">Save Settings</button>
         </div>
       </div>
     </main>
     
     <footer class="footer">
       <div class="version-info">
-        版本: <span id="version">1.0.0</span>
+        Version: <span id="version">1.0.0</span>
       </div>
       <div class="status" id="statusMessage"></div>
     </footer>
