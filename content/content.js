@@ -140,24 +140,25 @@ class ContentScript {
   
   startDataCollection() {
     // Collect data every 30 seconds
-    this.dataCollectionInterval = setInterval(() => {
-      // Check if context is still valid
-      if (!this.isActive || !this.contextValid || !this.isExtensionContextValid()) {
-        console.log('Stopping data collection - context invalid or inactive');
-        clearInterval(this.dataCollectionInterval);
-        return;
-      }
+    // this.dataCollectionInterval = setInterval(() => {
+    //   // Check if context is still valid
+    //   if (!this.isActive || !this.contextValid || !this.isExtensionContextValid()) {
+    //     console.log('Stopping data collection - context invalid or inactive');
+    //     clearInterval(this.dataCollectionInterval);
+    //     return;
+    //   }
       
-      try {
-        const rawData = this.aggregator.collectRecentActivities(30); // Last 30 seconds
-        const sanitizedData = this.privacyManager.sanitizeData(rawData);
+    //   try {
+    //     const rawData = this.aggregator.collectRecentActivities(30); // Last 30 seconds
+    //     const sanitizedData = this.privacyManager.sanitizeData(rawData);
         
-        // Send without expecting a response to avoid port closure errors
-        this.sendActivityData(sanitizedData);
-      } catch (error) {
-        console.log('Error collecting data:', error);
-      }
-    }, 30000);
+    //     // Send without expecting a response to avoid port closure errors
+    //     this.sendActivityData(sanitizedData);
+    //   } catch (error) {
+    //     console.log('Error collecting data:', error);
+    //   }
+    // }, 30000);
+    this.dataCollectionInterval = [];
   }
   
   setupMessageListeners() {

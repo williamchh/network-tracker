@@ -152,29 +152,23 @@ class PopupManager {
   }
   
   updateStats() {
-    const now = Date.now();
-    const fiveMinutesAgo = now - 5 * 60 * 1000;
-    
+    // Show total counts for all activities instead of filtering by last 5 minutes
     // Keyboard statistics
-    const keyboardCount = (this.activities.keyboard || []).filter(
-      k => k.timestamp > fiveMinutesAgo
-    ).length;
+    const keyboardCount = (this.activities.keyboard || []).length;
     document.getElementById('keyCount').textContent = keyboardCount;
     
     // Mouse statistics
     const mouseData = this.activities.mouse || [];
     const mouseCount = Array.isArray(mouseData)
-      ? mouseData.filter(m => m.timestamp > fiveMinutesAgo).length
-      : (mouseData.allEvents || []).filter(m => m.timestamp > fiveMinutesAgo).length;
+      ? mouseData.length
+      : (mouseData.allEvents || []).length;
     document.getElementById('clickCount').textContent = mouseCount;
     
     // Network statistics
-    const networkCount = (this.activities.network || []).filter(
-      n => n.timestamp > fiveMinutesAgo
-    ).length;
+    const networkCount = (this.activities.network || []).length;
     document.getElementById('networkCount').textContent = networkCount;
     
-    // Activity score
+    // Activity score (relative to recent activity, but let's keep it simple)
     const activityScore = Math.min(
       (keyboardCount * 0.3 + mouseCount * 0.4 + networkCount * 0.3) / 2,
       100
@@ -184,10 +178,9 @@ class PopupManager {
   
   updateActivityList() {
     const activityList = document.getElementById('activityList');
-    const now = Date.now();
     const recentActivities = [];
     
-    // Merge all types of recent activities
+    // Merge all types of activities
     ['keyboard', 'mouse', 'network'].forEach(type => {
       let activities = this.activities[type] || [];
       
@@ -197,13 +190,11 @@ class PopupManager {
       }
       
       if (Array.isArray(activities)) {
-        activities.slice(-5).forEach(activity => {
-          if (now - activity.timestamp < 5 * 60 * 1000) {
-            recentActivities.push({
-              ...activity,
-              activityType: type
-            });
-          }
+        activities.forEach(activity => {
+          recentActivities.push({
+            ...activity,
+            activityType: type
+          });
         });
       }
     });
@@ -216,7 +207,10 @@ class PopupManager {
       return;
     }
     
-    activityList.innerHTML = recentActivities.slice(0, 10).map((activity, index) => `
+    // Show top 50 activities instead of just 10, or all if preferred
+    const displayCount = Math.min(recentActivities.length, 50);
+    
+    activityList.innerHTML = recentActivities.slice(0, displayCount).map((activity, index) => `
       <div class="activity-item ${activity.activityType === 'network' || activity.activityType === 'mouse' ? 'clickable' : ''}"
            data-index="${index}"
            data-type="${activity.activityType}">
@@ -368,22 +362,41 @@ class PopupManager {
       try {
         const data = JSON.parse(e.target.result);
         
-        if (!data.activities) {
-          throw new Error('Invalid export file: missing activities');
+        // Handle both old and new export formats
+        const activities = data.activities || data;
+        
+        if (!activities || (!activities.keyboard && !activities.mouse && !activities.network)) {
+          throw new Error('Invalid export file: missing activities data');
         }
         
         if (confirm('Importing data will overwrite your current activities. Continue?')) {
+          // 1. Update storage
           await new Promise((resolve) => {
             chrome.storage.local.set({ 
-              activities: data.activities,
+              activities: activities,
               settings: data.settings || this.settings
             }, resolve);
           });
           
-          this.activities = data.activities;
+          this.activities = activities;
           this.settings = data.settings || this.settings;
+          
+          // 2. Notify content script to update its local state
+          const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          if (tab && tab.id) {
+            try {
+              // First reset content script state
+              await chrome.tabs.sendMessage(tab.id, { type: 'RESET_ACTIVITIES' });
+            } catch (err) {
+              console.log('Content script notification failed:', err);
+            }
+          }
+          
+          // Force a small delay to allow storage to settle
+          await new Promise(r => setTimeout(r, 500));
+          
           this.updateUI();
-          alert('Data imported successfully!');
+          // alert('Data imported successfully!'); // Removed success message as requested
         }
       } catch (error) {
         console.error('Error importing data:', error);
@@ -413,24 +426,13 @@ class PopupManager {
       return;
     }
     
-    // Get time range and speed settings
-    const timeRangeValue = document.getElementById('replayTimeRange').value;
-    const timeRange = parseInt(timeRangeValue);
+    // Get speed setting
     const speed = parseFloat(document.getElementById('replaySpeed').value);
     
     // Get activities
     await this.loadSettings();
-    const now = Date.now();
     
-    // Determine cutoff time based on selection
-    let cutoffTime;
-    if (timeRangeValue === 'all') {
-      cutoffTime = 0; // Include all activities
-    } else {
-      cutoffTime = now - (timeRange * 60 * 1000);
-    }
-    
-    console.log('Loading activities for replay, timeRange:', timeRangeValue, 'cutoffTime:', new Date(cutoffTime));
+    console.log('Loading all activities for replay');
     console.log('Activities object:', this.activities);
     console.log('Mouse data:', this.activities.mouse);
     
@@ -440,19 +442,19 @@ class PopupManager {
     
     if (Array.isArray(this.activities.mouse)) {
       // Mouse data is stored as an array of events
-      mouseClicks = this.activities.mouse.filter(m => m.type === 'click' && m.timestamp > cutoffTime);
-      mouseAllEvents = this.activities.mouse.filter(m => m.timestamp > cutoffTime);
+      mouseClicks = this.activities.mouse.filter(m => m.type === 'click');
+      mouseAllEvents = this.activities.mouse;
     } else if (typeof this.activities.mouse === 'object') {
       // Mouse data is stored as object with separate arrays
-      mouseClicks = (this.activities.mouse?.clicks || []).filter(c => c.timestamp > cutoffTime);
-      mouseAllEvents = (this.activities.mouse?.allEvents || []).filter(e => e.timestamp > cutoffTime);
+      mouseClicks = (this.activities.mouse?.clicks || []);
+      mouseAllEvents = (this.activities.mouse?.allEvents || []);
     }
     
     console.log('Mouse clicks found:', mouseClicks.length);
     console.log('Mouse all events found:', mouseAllEvents.length);
     
     const activitiesToReplay = {
-      keyboard: (this.activities.keyboard || []).filter(k => k.timestamp > cutoffTime),
+      keyboard: (this.activities.keyboard || []),
       mouse: {
         movements: [],
         clicks: mouseClicks,
@@ -465,16 +467,12 @@ class PopupManager {
                       activitiesToReplay.mouse.allEvents.length;
     
     if (totalEvents === 0) {
-      const msg = timeRangeValue === 'all' 
-        ? 'No activity records found' 
-        : `No activity records in the last ${timeRange} minutes. Try selecting "All recorded activities".`;
-      alert(msg);
+      alert('No activity records found');
       return;
     }
     
     // Confirm before replaying
-    const rangeMsg = timeRangeValue === 'all' ? 'all' : `the last ${timeRange} minutes of`;
-    const confirmMsg = `About to replay ${totalEvents} activity events from ${rangeMsg} recorded data\n\n` +
+    const confirmMsg = `About to replay all ${totalEvents} activity events\n\n` +
                      `Playback speed: ${speed}x\n\n` +
                      `Note: Replay will execute keyboard and mouse operations on the current webpage. Please ensure the page state matches the recording state.`;
     

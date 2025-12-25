@@ -45,77 +45,62 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Handle activity data
 async function handleActivityData(data, tabId) {
   try {
-    // Get current settings
-    const { settings } = await chrome.storage.local.get('settings');
+    // 1. Get current settings and activities
+    const { settings, activities: currentActivities } = await chrome.storage.local.get(['settings', 'activities']);
+    const activities = currentActivities || { keyboard: [], mouse: [], network: [] };
     
-    // Merge data
-    const { activities } = await chrome.storage.local.get('activities');
+    // 2. Add new data from the content script (ONLY if there is new data to add)
+    let hasNewData = false;
     
-    const now = Date.now();
-    const retentionTime = (settings?.dataRetention || 5) * 60 * 1000;
-    
-    // Initialize activities structure if not exists
-    if (!activities.keyboard) activities.keyboard = [];
-    if (!activities.mouse) activities.mouse = [];
-    if (!activities.network) activities.network = [];
-    
-    // Clean up old data
-    ['keyboard', 'mouse', 'network'].forEach(type => {
-      if (activities[type]) {
-        activities[type] = activities[type].filter(
-          item => now - item.timestamp < retentionTime
-        );
-      }
-    });
-    
-    // Add new data - check if data is an array
-    if (data.keyboard && Array.isArray(data.keyboard) && settings?.monitorKeyboard !== false) {
+    if (data.keyboard && Array.isArray(data.keyboard) && data.keyboard.length > 0 && settings?.monitorKeyboard !== false) {
       activities.keyboard.push(...data.keyboard);
-      console.log(`Added ${data.keyboard.length} keyboard events`);
+      hasNewData = true;
     }
     
-    // Handle mouse data - mouseData is an object containing clicks, movements, scrolls
     if (data.mouse && settings?.monitorMouse !== false) {
-      // Initialize mouse array if not exists
-      if (!Array.isArray(activities.mouse)) {
-        activities.mouse = [];
+      let mouseEvents = [];
+      if (data.mouse.allEvents && Array.isArray(data.mouse.allEvents)) {
+        mouseEvents = data.mouse.allEvents;
+      } else if (Array.isArray(data.mouse)) {
+        mouseEvents = data.mouse;
+      } else if (typeof data.mouse === 'object') {
+        mouseEvents = [...(data.mouse.clicks || []), ...(data.mouse.movements || []), ...(data.mouse.scrolls || [])];
       }
       
-      // If mouse data is an object with allEvents
-      if (data.mouse.allEvents && Array.isArray(data.mouse.allEvents)) {
-        activities.mouse.push(...data.mouse.allEvents);
-        console.log(`Added ${data.mouse.allEvents.length} mouse events`);
-      }
-      // If mouse data is directly an array
-      else if (Array.isArray(data.mouse)) {
-        activities.mouse.push(...data.mouse);
-        console.log(`Added ${data.mouse.length} mouse events`);
-      }
-      // If mouse data is an object with clicks, movements, scrolls
-      else if (typeof data.mouse === 'object') {
-        const allMouseEvents = [
-          ...(data.mouse.clicks || []),
-          ...(data.mouse.movements || []),
-          ...(data.mouse.scrolls || [])
-        ];
-        if (allMouseEvents.length > 0) {
-          activities.mouse.push(...allMouseEvents);
-          console.log(`Added ${allMouseEvents.length} mouse events`);
-        }
+      if (mouseEvents.length > 0) {
+        activities.mouse.push(...mouseEvents);
+        hasNewData = true;
       }
     }
     
-    if (data.network && Array.isArray(data.network) && settings?.monitorNetwork !== false) {
+    if (data.network && Array.isArray(data.network) && data.network.length > 0 && settings?.monitorNetwork !== false) {
       activities.network.push(...data.network);
-      console.log(`Added ${data.network.length} network events:`, data.network.map(n => `${n.method} ${n.url}`).join(', '));
+      hasNewData = true;
     }
     
-    // Save data
-    await chrome.storage.local.set({ activities });
-    
-    // Periodically send to QA system (only when valid endpoint is configured)
-    if (settings?.qaEndpoint && settings.qaEndpoint.trim() !== '') {
-      sendToQASystem(activities, settings);
+    // 3. ONLY persist if we actually added new data. 
+    // This prevents the background script from accidentally overwriting 
+    // imported data with an "empty" update if a race condition occurs.
+    if (hasNewData) {
+      // Also perform a quick cleanup of VERY old data (e.g. > 24h) just to prevent storage bloat
+      // but keep it very loose to avoid killing imported sessions.
+      const now = Date.now();
+      const absoluteMaxRetention = 24 * 60 * 60 * 1000; // 24 hours
+      
+      ['keyboard', 'mouse', 'network'].forEach(type => {
+        if (activities[type] && Array.isArray(activities[type])) {
+          if (activities[type].length > 2000) { // Only cap if it's getting huge
+            activities[type] = activities[type].slice(-2000);
+          }
+        }
+      });
+
+      await chrome.storage.local.set({ activities });
+      
+      // 4. Send to QA if needed
+      if (settings?.qaEndpoint && settings.qaEndpoint.trim() !== '') {
+        sendToQASystem(activities, settings);
+      }
     }
   } catch (error) {
     console.error('Error handling activity data:', error);
@@ -188,15 +173,33 @@ async function sendToQASystem(activities, settings) {
 
 // Periodically clean up data
 setInterval(async () => {
-  const { activities, settings } = await chrome.storage.local.get(['activities', 'settings']);
-  const now = Date.now();
-  const retentionTime = settings.dataRetention * 60 * 1000;
-  
-  Object.keys(activities).forEach(key => {
-    activities[key] = activities[key].filter(
-      item => now - item.timestamp < retentionTime
-    );
-  });
-  
-  await chrome.storage.local.set({ activities });
+  try {
+    const { activities, settings } = await chrome.storage.local.get(['activities', 'settings']);
+    if (!activities) return;
+    
+    const now = Date.now();
+    const retentionTime = (settings?.dataRetention || 5) * 60 * 1000;
+    
+    // Only clean up if retention is not set to "infinite" (e.g. 1440 mins = 24h)
+    if (settings?.dataRetention && settings.dataRetention >= 1440) {
+      return;
+    }
+
+    let changed = false;
+    Object.keys(activities).forEach(key => {
+      if (Array.isArray(activities[key])) {
+        const originalLength = activities[key].length;
+        activities[key] = activities[key].filter(
+          item => !item.timestamp || (now - item.timestamp < retentionTime) || (item.timestamp > now)
+        );
+        if (activities[key].length !== originalLength) changed = true;
+      }
+    });
+    
+    if (changed) {
+      await chrome.storage.local.set({ activities });
+    }
+  } catch (err) {
+    console.error('Periodic cleanup failed:', err);
+  }
 }, 60000); // Clean up every minute
