@@ -22,6 +22,19 @@ body {
   margin-bottom: 40px;
   padding-bottom: 20px;
   border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.header .logo {
+  width: 80px;
+  height: 80px;
+}
+
+.header-content {
+  text-align: center;
 }
 
 .header h1 {
