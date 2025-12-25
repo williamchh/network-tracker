@@ -64,6 +64,15 @@
     const options = args[1] || {};
     const method = options.method || 'GET';
 
+    // Helper to convert Headers object to plain object for postMessage compatibility
+    const headersToPlain = (headers) => {
+      if (!headers) return {};
+      if (headers instanceof Headers) {
+        return Object.fromEntries(headers.entries());
+      }
+      return headers;
+    };
+
     return originalFetch.apply(this, args)
       .then(async (response) => {
         // Clone the response to avoid consuming the body
@@ -85,7 +94,7 @@
           url: url,
           status: response.status,
           response: responseBody,
-          requestHeaders: options.headers || {},
+          requestHeaders: headersToPlain(options.headers),
           responseHeaders: Object.fromEntries(response.headers.entries()),
           duration: Date.now() - startTime
         });
@@ -98,7 +107,7 @@
           url: url,
           status: 0,
           response: error.message || 'Fetch error',
-          requestHeaders: options.headers || {},
+          requestHeaders: headersToPlain(options.headers),
           responseHeaders: {},
           error: true,
           duration: Date.now() - startTime
