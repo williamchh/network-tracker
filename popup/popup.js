@@ -55,6 +55,15 @@ class PopupManager {
     document.getElementById('openOptions').addEventListener('click', () => {
       chrome.runtime.openOptionsPage();
     });
+    
+    // 回放按钮
+    document.getElementById('replayActivities').addEventListener('click', () => {
+      this.replayActivities();
+    });
+    
+    document.getElementById('stopReplay').addEventListener('click', () => {
+      this.stopReplay();
+    });
   }
   
   async updateSetting(key, value) {
@@ -264,6 +273,79 @@ class PopupManager {
       });
       this.activities = {};
       this.updateUI();
+    }
+  }
+  
+  async replayActivities() {
+    // Get the active tab
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) {
+      alert('请先打开一个网页标签页');
+      return;
+    }
+    
+    // Get the time range and speed settings
+    const timeRange = parseInt(document.getElementById('replayTimeRange').value);
+    const speed = parseFloat(document.getElementById('replaySpeed').value);
+    
+    // Get activities from the specified time range
+    await this.loadSettings();
+    const now = Date.now();
+    const cutoffTime = now - (timeRange * 60 * 1000);
+    
+    const activitiesToReplay = {
+      keyboard: (this.activities.keyboard || []).filter(k => k.timestamp > cutoffTime),
+      mouse: {
+        movements: (this.activities.mouse?.movements || []).filter(m => m.timestamp > cutoffTime),
+        clicks: (this.activities.mouse?.clicks || []).filter(c => c.timestamp > cutoffTime),
+        scrolls: (this.activities.mouse?.scrolls || []).filter(s => s.timestamp > cutoffTime),
+        allEvents: (this.activities.mouse?.allEvents || []).filter(e => e.timestamp > cutoffTime)
+      }
+    };
+    
+    const totalEvents = activitiesToReplay.keyboard.length +
+                      activitiesToReplay.mouse.allEvents.length;
+    
+    if (totalEvents === 0) {
+      alert(`最近${timeRange}分钟内没有活动记录`);
+      return;
+    }
+    
+    // Confirm before replaying
+    const confirmMsg = `即将回放最近${timeRange}分钟内的${totalEvents}个活动事件\n\n` +
+                     `回放速度: ${speed}x\n\n` +
+                     `注意: 回放将在当前网页上执行键盘和鼠标操作，请确保页面状态与录制时一致。`;
+    
+    if (!confirm(confirmMsg)) {
+      return;
+    }
+    
+    // Send replay message to content script
+    try {
+      await chrome.tabs.sendMessage(tab.id, {
+        type: 'REPLAY_ACTIVITIES',
+        activities: activitiesToReplay,
+        options: { speed: speed }
+      });
+      
+      // Close the popup after starting replay
+      window.close();
+    } catch (error) {
+      console.error('Error starting replay:', error);
+      alert('无法启动回放。请确保已刷新页面后再试。');
+    }
+  }
+  
+  async stopReplay() {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) return;
+    
+    try {
+      await chrome.tabs.sendMessage(tab.id, {
+        type: 'STOP_REPLAY'
+      });
+    } catch (error) {
+      console.error('Error stopping replay:', error);
     }
   }
 }

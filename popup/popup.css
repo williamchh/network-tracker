@@ -157,6 +157,20 @@ body {
   padding: 20px;
 }
 
+.replay-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.replay-controls .select {
+  margin-bottom: 0;
+}
+
+.replay-controls .btn {
+  margin-bottom: 0;
+}
+
 .select {
   width: 100%;
   padding: 8px 12px;

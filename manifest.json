@@ -21,7 +21,8 @@
         "content/keyboard-monitor.js",
         "content/mouse-monitor.js",
         "content/activity-aggregator.js",
-        "content/privacy-manager.js"
+        "content/privacy-manager.js",
+        "content/activity-replayer.js"
       ],
       "run_at": "document_end"
     }

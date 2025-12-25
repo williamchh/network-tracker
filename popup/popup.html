@@ -67,6 +67,25 @@
       </select>
     </div>
     
+    <div class="section">
+      <h3>活动回放</h3>
+      <div class="replay-controls">
+        <select id="replayTimeRange" class="select">
+          <option value="1">最近1分钟</option>
+          <option value="5" selected>最近5分钟</option>
+          <option value="10">最近10分钟</option>
+        </select>
+        <select id="replaySpeed" class="select">
+          <option value="0.5">0.5x 慢速</option>
+          <option value="1" selected>1x 正常</option>
+          <option value="2">2x 快速</option>
+          <option value="5">5x 极速</option>
+        </select>
+        <button id="replayActivities" class="btn btn-primary">回放</button>
+        <button id="stopReplay" class="btn btn-secondary">停止</button>
+      </div>
+    </div>
+    
     <div class="button-group">
       <button id="exportData" class="btn btn-secondary">导出数据</button>
       <button id="clearData" class="btn btn-secondary">清除数据</button>
