@@ -59,6 +59,7 @@ class ActivityAggregator {
   // Optional: Add a method to clear all data
   clearAll() {
     this.networkData = [];
+    this.lastCollectionTimestamp = 0; // Reset collection timestamp
     if (this.keyboardMonitor) {
       this.keyboardMonitor.clear?.();
     }

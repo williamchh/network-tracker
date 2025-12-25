@@ -64,6 +64,28 @@ class PopupManager {
     document.getElementById('stopReplay').addEventListener('click', () => {
       this.stopReplay();
     });
+    
+    // Refresh button
+    document.getElementById('refreshActivities').addEventListener('click', () => {
+      this.refreshActivities();
+    });
+    
+    // Clear activities button
+    document.getElementById('clearActivities').addEventListener('click', () => {
+      this.clearActivities();
+    });
+    
+    // Modal close button
+    document.getElementById('closeModal').addEventListener('click', () => {
+      this.closeModal();
+    });
+    
+    // Close modal when clicking outside
+    document.getElementById('networkModal').addEventListener('click', (e) => {
+      if (e.target.id === 'networkModal') {
+        this.closeModal();
+      }
+    });
   }
   
   async updateSetting(key, value) {
@@ -174,8 +196,10 @@ class PopupManager {
       return;
     }
     
-    activityList.innerHTML = recentActivities.slice(0, 10).map(activity => `
-      <div class="activity-item">
+    activityList.innerHTML = recentActivities.slice(0, 10).map((activity, index) => `
+      <div class="activity-item ${activity.activityType === 'network' ? 'clickable' : ''}"
+           data-index="${index}"
+           data-type="${activity.activityType}">
         <div>
           <span class="activity-type type-${activity.activityType}">
             ${this.getActivityTypeLabel(activity.activityType)}
@@ -187,6 +211,14 @@ class PopupManager {
         </div>
       </div>
     `).join('');
+    
+    // Add click handlers for network activity items
+    activityList.querySelectorAll('.activity-item.clickable').forEach(item => {
+      item.addEventListener('click', (e) => {
+        const index = parseInt(e.currentTarget.dataset.index);
+        this.showNetworkActivityDetails(recentActivities[index]);
+      });
+    });
   }
   
   getActivityTypeLabel(type) {
@@ -347,6 +379,175 @@ class PopupManager {
     } catch (error) {
       console.error('Error stopping replay:', error);
     }
+  }
+  
+  async refreshActivities() {
+    const refreshBtn = document.getElementById('refreshActivities');
+    
+    // Add spinning animation
+    refreshBtn.classList.add('spinning');
+    
+    try {
+      // Get active tab and send refresh message to content script
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.id) {
+        await chrome.tabs.sendMessage(tab.id, {
+          type: 'REFRESH_ACTIVITIES'
+        });
+        
+        // Wait a moment for data to be sent to aggregator, then reload
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      
+      // Reload settings and update UI
+      await this.loadSettings();
+      this.updateUI();
+    } catch (error) {
+      console.log('Error during refresh:', error);
+      // If content script is not available, just reload settings
+      await this.loadSettings();
+      this.updateUI();
+    } finally {
+      // Always remove spinning animation
+      refreshBtn.classList.remove('spinning');
+    }
+  }
+  
+  async clearActivities() {
+    // Confirm before clearing
+    if (!confirm('Are you sure you want to clear all activity records? This will reset the state and start recording from scratch.')) {
+      return;
+    }
+    
+    try {
+      // Clear activities from storage
+      await chrome.storage.local.set({
+        activities: {
+          keyboard: [],
+          mouse: [],
+          network: []
+        }
+      });
+      
+      // Send reset message to content script to clear its state
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.id) {
+        try {
+          await chrome.tabs.sendMessage(tab.id, {
+            type: 'RESET_ACTIVITIES'
+          });
+        } catch (error) {
+          console.log('Could not send reset message to content script:', error);
+        }
+      }
+      
+      // Reload settings and update UI to show empty state
+      await this.loadSettings();
+      this.updateUI();
+      
+      console.log('Activities cleared successfully');
+    } catch (error) {
+      console.error('Error clearing activities:', error);
+      alert('Failed to clear activities. Please try again.');
+    }
+  }
+  
+  showNetworkActivityDetails(activity) {
+    const modal = document.getElementById('networkModal');
+    const modalBody = document.getElementById('modalBody');
+    
+    // Build the modal content
+    let content = `
+      <div class="modal-section">
+        <div class="modal-section-title">Request Information</div>
+        <div class="modal-detail-row">
+          <div class="modal-detail-label">Method:</div>
+          <div class="modal-detail-value"><code>${activity.method || 'GET'}</code></div>
+        </div>
+        <div class="modal-detail-row">
+          <div class="modal-detail-label">URL:</div>
+          <div class="modal-detail-value">${activity.url || '-'}</div>
+        </div>
+        <div class="modal-detail-row">
+          <div class="modal-detail-label">Type:</div>
+          <div class="modal-detail-value">${activity.type || 'xhr'}</div>
+        </div>
+        <div class="modal-detail-row">
+          <div class="modal-detail-label">Timestamp:</div>
+          <div class="modal-detail-value">${new Date(activity.timestamp).toLocaleString()}</div>
+        </div>
+      </div>
+    `;
+    
+    // Add request headers if available
+    if (activity.requestHeaders && Object.keys(activity.requestHeaders).length > 0) {
+      content += `
+        <div class="modal-section">
+          <div class="modal-section-title">Request Headers</div>
+          ${Object.entries(activity.requestHeaders).map(([key, value]) => `
+            <div class="modal-detail-row">
+              <div class="modal-detail-label">${key}:</div>
+              <div class="modal-detail-value">${value}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+    
+    // Add response details if available
+    if (activity.status) {
+      content += `
+        <div class="modal-section">
+          <div class="modal-section-title">Response Details</div>
+          <div class="modal-detail-row">
+            <div class="modal-detail-label">Status:</div>
+            <div class="modal-detail-value">
+              <code>${activity.status} ${activity.statusText || ''}</code>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Add request body if available
+    if (activity.requestBody) {
+      content += `
+        <div class="modal-section">
+          <div class="modal-section-title">Request Body</div>
+          <div class="modal-detail-row">
+            <div class="modal-detail-value">
+              <pre>${typeof activity.requestBody === 'string'
+                ? activity.requestBody
+                : JSON.stringify(activity.requestBody, null, 2)}</pre>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Add response body if available
+    if (activity.responseBody) {
+      content += `
+        <div class="modal-section">
+          <div class="modal-section-title">Response Body</div>
+          <div class="modal-detail-row">
+            <div class="modal-detail-value">
+              <pre>${typeof activity.responseBody === 'string'
+                ? activity.responseBody
+                : JSON.stringify(activity.responseBody, null, 2)}</pre>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    modalBody.innerHTML = content;
+    modal.classList.add('show');
+  }
+  
+  closeModal() {
+    const modal = document.getElementById('networkModal');
+    modal.classList.remove('show');
   }
 }
 

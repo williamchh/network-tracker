@@ -52,7 +52,24 @@
     </div>
     
     <div class="section">
-      <h3>Recent Activities</h3>
+      <div class="section-header">
+        <h3>Recent Activities</h3>
+        <div class="section-actions">
+          <button id="clearActivities" class="clear-btn" title="Clear activities">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18"></path>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+          <button id="refreshActivities" class="refresh-btn" title="Refresh activities">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 4v6h-6"></path>
+              <path d="M1 20v-6h6"></path>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
       <div class="activity-list" id="activityList">
         <div class="empty-state">No activity records</div>
       </div>
@@ -98,6 +115,19 @@
       </div>
       <div class="last-update">
         Last Update: <span id="lastUpdate">-</span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Network Activity Modal -->
+  <div id="networkModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Network Activity Details</h3>
+        <button class="modal-close" id="closeModal">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Content will be populated dynamically -->
       </div>
     </div>
   </div>

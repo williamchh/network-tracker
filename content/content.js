@@ -172,6 +172,39 @@ class ContentScript {
           }
           return true;
           
+        case 'REFRESH_ACTIVITIES':
+          // Trigger immediate data collection and send to aggregator
+          if (this.aggregator && this.isActive) {
+            try {
+              const rawData = this.aggregator.collectRecentActivities(5); // Last 5 minutes
+              const sanitizedData = this.privacyManager.sanitizeData(rawData);
+              this.sendActivityData(sanitizedData);
+              sendResponse({ success: true });
+            } catch (error) {
+              console.log('Error refreshing activities:', error);
+              sendResponse({ success: false, error: error.message });
+            }
+          } else {
+            sendResponse({ success: false, error: 'Aggregator not active' });
+          }
+          return true;
+          
+        case 'RESET_ACTIVITIES':
+          // Reset aggregator state and clear all cached data
+          if (this.aggregator) {
+            try {
+              this.aggregator.clearAll();
+              console.log('Activities reset in content script');
+              sendResponse({ success: true });
+            } catch (error) {
+              console.log('Error resetting activities:', error);
+              sendResponse({ success: false, error: error.message });
+            }
+          } else {
+            sendResponse({ success: false, error: 'Aggregator not available' });
+          }
+          return true;
+          
         case 'TOGGLE_MONITORING':
           this.isActive = message.active;
           sendResponse({ success: true });
